@@ -1,35 +1,38 @@
 import streamlit as st
 from datetime import datetime
-
 from streamlit import subheader
 
+#every file namae.py gets on the side bar
+#this helps for ui to look CLEANER
+st.markdown(
+    """
+    <style>
+    /* Hide only the second page (zone1) */
+    [data-testid="stSidebarNav"] ul li:nth-child(2) {
+        display: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+st.set_page_config(page_title="Zones", layout="wide")
+st.title("Zone 1 General metrics")
+st.sidebar.caption("Zone 1 navigation") #sidebar caption
 
-
-#browser tab title
-st.set_page_config(page_title="Zone 1 Dashboard", layout="wide")
-
-st.sidebar.header("Greenhouse control") #sidebar
-
-#this navigate between pages, dropdown
-zone = st.sidebar.selectbox(
-    "Select greenhouse zone",
-    ["Zone 1", "Zone 2"],
+#sidebar for zone 1
+zone1_selection = st.sidebar.selectbox(
+    "Select a metric for zone 1",
+    ["Dashboard", "Analytics", "Zone 1 Alerts"],
     index=0
 )
 
-#“This page is only valid for Zone 1
-#If the user selects anything else,
-# send them back to the main page and stop rendering.
-#until we work on a new page
-if zone != "Zone 1":
-    st.switch_page("main.py")
-    st.stop()
 
 
-#main content
-st.title("Zone 1 Dashboard")
-st.caption("UI mock")
+#last updated as page  refresh
+st.caption(
+    f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+)
 
 #columns with its data display
 col1, col2, col3, col4 = st.columns(4)
@@ -79,3 +82,6 @@ st.divider()
 st.caption(
     f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 )
+
+st.divider()
+
