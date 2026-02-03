@@ -1,2 +1,10 @@
-streamlit
-requests
+## Frontend Dependencies
+
+These are the libraries the frontend needs to run:
+
+- `streamlit`
+- `requests`
+
+Install them with:
+```bash
+pip install -r requirements.txt
