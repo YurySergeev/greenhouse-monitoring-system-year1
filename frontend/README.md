@@ -1,4 +1,4 @@
-# Frontend – Greenhouse Monitoring System
+# Instructuctions to run Frontend – Greenhouse Monitoring System
 
 
 ---
