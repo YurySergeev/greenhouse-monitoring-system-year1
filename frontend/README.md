@@ -18,16 +18,16 @@ python --version
 cd frontend
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r streamlit_app/requirements.txt
-streamlit run streamlit_app/main.py
+pip install -r requirements.txt
+streamlit run streamlit_app/Home.py
 
 
 - set up and run for Windows
 cd frontend
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r streamlit_app/requirements.txt
-streamlit run streamlit_app/main.py
+pip install -r requirements.txt
+streamlit run streamlit_app/Home.py
 
 
 -open browser
