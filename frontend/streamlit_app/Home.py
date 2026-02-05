@@ -1,28 +1,27 @@
-from operator import index
-
 import streamlit as st
 from pathlib import Path
 
+st.set_page_config(
+    page_title="Greenhouse Home",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-st.set_page_config(page_title="Greenhouse Home", layout="wide", initial_sidebar_state="expanded")
-
-#header
+# Header
 st.title("Kent State Greenhouse Monitoring System")
 st.divider()
-#introduction to the page
-st.subheader("Welcome") #i need a wave emoji here
 
+# Introduction
+st.subheader("Welcome 👋")
 st.write(""" 
 This system will help Kent State Greenhouse Monitoring System of zone
 to visualize the conditions accross different zones.
 """)
 
-## anotheR subtitle
 st.subheader("What We Are Monitoring")
 
 column1, column2, column3 = st.columns(3)
 
-##TODO:NEDDS STYLING
 with column1:
     st.markdown(
         """
@@ -33,21 +32,19 @@ with column1:
         - Soil Moisture  
         """
     )
-##TODO:NEDDS STYLING
+
 with column2:
     st.markdown(
         """
         **System Capabilities**
         - Multi-zone greenhouse monitoring  
         - Data visualization through dashboards and analytics  
-        - Alert detection for  conditions  
+        - Alert detection for conditions  
         - Communication with Raspberry Pi sensor systems  
         """
     )
 
-
-
-#sidebar
+# Sidebar
 st.sidebar.title("Zones")
 zone_selection = st.sidebar.selectbox(
     "Select a zone",
@@ -55,23 +52,21 @@ zone_selection = st.sidebar.selectbox(
     index=0
 )
 
-#select zone
+# Select zone routing
 if zone_selection == "Zone 1":
     st.switch_page("pages/1_zone1.py")
+elif zone_selection == "Zone 2":
+    st.switch_page("pages/2_zone2.py")
 
-#image
-BASE_DIR = Path(__file__).parent #directory on the front end folder
-IMG = BASE_DIR / "assets/greenhouse.jpg" #path
+# Image
+BASE_DIR = Path(__file__).parent
+IMG = BASE_DIR / "assets/greenhouse.jpg"
+st.image(str(IMG), use_container_width=True)
 
-#green house image display
-st.image(str(IMG), width="stretch")
-
-#this is to hide the file name on gthe sidebar
-
+# Hide the zone1 page name on the sidebar (fragile if page order changes)
 st.markdown(
     """
     <style>
-    /* Hide only the second page (zone1) */
     [data-testid="stSidebarNav"] ul li:nth-child(2) {
         display: none;
     }
@@ -79,6 +74,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-
-
