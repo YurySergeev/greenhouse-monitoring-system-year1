@@ -55,8 +55,6 @@ zone_selection = st.sidebar.selectbox(
 # Select zone routing
 if zone_selection == "Zone 1":
     st.switch_page("pages/1_zone1.py")
-elif zone_selection == "Zone 2":
-    st.switch_page("pages/2_zone2.py")
 
 # Image
 BASE_DIR = Path(__file__).parent
