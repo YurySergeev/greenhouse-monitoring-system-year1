@@ -3,6 +3,7 @@ from datetime import datetime
 from streamlit import subheader
 import requests
 import time
+from utils.conversion import fahrenheitToCelsius
 
 #every file namae.py gets on the side bar
 #this helps for ui to look CLEANER
@@ -79,7 +80,7 @@ def metric_box_style(title, value, color):
 
 #column1 returning values from the function
 with col1:
-    metric_box_style("Temperature", f"{temp}°F", "#FF9F43")
+    metric_box_style("Temperature", f"{fahrenheitToCelsius(temp)}°C", "#FF9F43")
 
 #column 2 returning
 with col2:
