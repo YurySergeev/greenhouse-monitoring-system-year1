@@ -1,6 +1,9 @@
 import streamlit as st
 from datetime import datetime
 from streamlit import subheader
+import requests
+import time
+from utils.conversion import fahrenheitToCelsius
 
 #every file namae.py gets on the side bar
 #this helps for ui to look CLEANER
@@ -34,6 +37,22 @@ st.caption(
     f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 )
 
+# OpenWeather API configuration
+API_KEY = "9597cb5b6b7536f0f9d62e60a7978975"
+CITY = "Cleveland"  # Adjust city
+url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&units=imperial&appid={API_KEY}"
+
+# Function to fetch weather data
+def fetch_weather_data():
+    response = requests.get(url)
+    data = response.json()
+    temp = data["main"]["temp"]
+    humidity = data["main"]["humidity"]
+    weather = data["weather"][0]["description"]
+    return temp, humidity, weather
+
+temp, humidity, weather = fetch_weather_data()
+
 #columns with its data display
 col1, col2, col3, col4 = st.columns(4)
 
@@ -61,15 +80,15 @@ def metric_box_style(title, value, color):
 
 #column1 returning values from the function
 with col1:
-    metric_box_style( "Temperature", "33.3C", "#FF9F43")
+    metric_box_style("Temperature", f"{fahrenheitToCelsius(temp)}°C", "#FF9F43")
 
 #column 2 returning
 with col2:
-    metric_box_style( "Humidity", "46%.", "#2E86DE")
+    metric_box_style("Humidity", f"{humidity}%", "#2E86DE")
 
 #column 3 returning values
 with col3:
-    metric_box_style( "pH levels", "5.5%.", "#8E44AD")
+    metric_box_style("Weather", f"{weather.capitalize()}", "#8E44AD")
 
 #box 4 returning values
 with col4:
@@ -84,4 +103,3 @@ st.caption(
 )
 
 st.divider()
-
