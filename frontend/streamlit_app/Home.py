@@ -167,15 +167,16 @@ if zone_selection == "Zone 1":
     st.switch_page("pages/1_zone1.py")
 
 #image
-BASE_DIR = Path(__file__).parent #directory on the front end folder
-IMG = BASE_DIR / "assets/greenhouse2.jpg" #path
+BASE_DIR = Path(__file__).resolve().parent
+ASSETS_FILE_DIR = BASE_DIR / "assets"
+IMG_GREENHOUSE = ASSETS_FILE_DIR / "greenhouse2.jpg"
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 img_col = st.columns([1, 3, 1])[1]  # center column
 
 with img_col:
-    st.image(str(IMG), use_container_width=True)
+    st.image(str(IMG_GREENHOUSE), use_container_width=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
