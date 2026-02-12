@@ -83,7 +83,7 @@ hr { opacity: 0.15; }
 """, unsafe_allow_html=True)
 
 # --- side bar logo  ---
-st.sidebar.image("assets/logo3.png", width=120)
+st.sidebar.image("streamlit_app/assets/logo3.png", width=120)
 
 
 # style for logo

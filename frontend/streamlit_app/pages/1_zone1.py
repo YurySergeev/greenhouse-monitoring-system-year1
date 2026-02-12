@@ -1,9 +1,11 @@
 import streamlit as st
 from datetime import datetime
+import os
 from streamlit import subheader
 import requests
 import time
 from utils.conversion import fahrenheitToCelsius
+from dotenv import load_dotenv
 
 #every file namae.py gets on the side bar
 #this helps for ui to look CLEANER
@@ -38,8 +40,9 @@ st.caption(
 )
 
 # OpenWeather API configuration
-API_KEY = "9597cb5b6b7536f0f9d62e60a7978975"
-CITY = "Cleveland"  # Adjust city
+load_dotenv()
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
+CITY = "Akron"  # Adjust city
 url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&units=imperial&appid={API_KEY}"
 
 # Function to fetch weather data
