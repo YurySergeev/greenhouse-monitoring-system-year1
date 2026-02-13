@@ -42,6 +42,10 @@ st.caption(
 # OpenWeather API configuration
 load_dotenv()
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
+if not API_KEY:
+    st.error("API key not found. Please check your .env file.")
+else:
+    st.write(f"API Key loaded successfully: {API_KEY}")
 CITY = "Akron"  # Adjust city
 url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&units=imperial&appid={API_KEY}"
 
