@@ -24,7 +24,7 @@ streamlit run streamlit_app/Home.py
 
 - set up and run for Windows
 cd frontend
-py -m venv .venv
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 streamlit run streamlit_app/Home.py
