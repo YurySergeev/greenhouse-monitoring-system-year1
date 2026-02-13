@@ -5,10 +5,16 @@ import time
 from operator import index
 from pathlib import Path
 
-#bblue : 131b59
-#yellow: edaf10
-#brown: 57360b
+# bblue : 131b59
+# yellow: edaf10
+# brown: 57360b
 
+# Setup paths
+BASE_DIR = Path(__file__).resolve().parent
+ASSETS_DIR = BASE_DIR / "assets"
+
+LOGO_PATH = ASSETS_DIR / "logo3.png"
+IMG_GREENHOUSE = ASSETS_DIR / "greenhouse2.jpg"
 
 st.set_page_config(page_title="Greenhouse Home", layout="wide", initial_sidebar_state="expanded")
 
@@ -83,8 +89,7 @@ hr { opacity: 0.15; }
 """, unsafe_allow_html=True)
 
 # --- side bar logo  ---
-st.sidebar.image("streamlit_app/assets/logo3.png", width=120)
-
+st.sidebar.image(str(LOGO_PATH), width=120)
 
 # style for logo
 st.sidebar.markdown(
@@ -97,30 +102,27 @@ st.sidebar.markdown(
         margin-top:-26px;   
         margin-bottom:8px;
     ">
-    
+
     </div>
     """,
     unsafe_allow_html=True
 )
 st.sidebar.divider()
 
-
-
-
-#title style
+# title style
 st.markdown("""
     <div class="ksuTitle">
     <h1> Kent State Green House Monitoring</h1>
-   
+
     </div>
     """, unsafe_allow_html=True
-)
+            )
 
-#subtitle
+# subtitle
 st.markdown("<div class='system-description'> What the sensors monitor?</div> ", unsafe_allow_html=True)
 left, right = st.columns(2, gap="large")
 
-#left box
+# left box
 with left:
     st.markdown("""
     <div class="box">
@@ -135,7 +137,7 @@ with left:
     </div>
     """, unsafe_allow_html=True)
 
-#right box
+# right box
 with right:
     st.markdown("""
     <div class="box">
@@ -149,12 +151,7 @@ with right:
     </div>
     """, unsafe_allow_html=True)
 
-
-
-
-
-
-#sidebar
+# sidebar
 st.sidebar.title("System Control")
 zone_selection = st.sidebar.selectbox(
     "Select a zone",
@@ -162,27 +159,21 @@ zone_selection = st.sidebar.selectbox(
     index=0
 )
 
-#select zone
+# select zone
 if zone_selection == "Zone 1":
     st.switch_page("pages/1_zone1.py")
 
-#image
-BASE_DIR = Path(__file__).resolve().parent
-ASSETS_FILE_DIR = BASE_DIR / "assets"
-IMG_GREENHOUSE = ASSETS_FILE_DIR / "greenhouse2.jpg"
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-img_col = st.columns([1, 3, 1])[1]  # center column
+# Greenhouse image centered
+img_col = st.columns([1, 3, 1])[1]
 
 with img_col:
-    st.image(str(IMG_GREENHOUSE), use_container_width=True)
+    if IMG_GREENHOUSE.exists():
+        st.image(str(IMG_GREENHOUSE), use_container_width=True)
+    else:
+        st.info("Greenhouse image not found at: " + str(IMG_GREENHOUSE))
 
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-
-#keep this
-#this is to hide the file.py name off the sidebar
+# keep this
+# this is to hide the file.py name off the sidebar
 st.markdown(
     """
     <style>
@@ -194,6 +185,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-
-
