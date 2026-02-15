@@ -16,8 +16,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import textwrap
+import random # this will generate random numbers to use it as mmock for hecking status conditions on zone plnat
 
-#-------------------------------------------------------------------
+#--------------------------- charts libraries
+import plotly.express as px
+import plotly.graph_objects as go #gauge chart
+
 
 
 
@@ -217,49 +221,121 @@ st.markdown("""
 """, unsafe_allow_html=True)
 # -----------------------------------------------
 
+UPPER_ZONE_RULES = {
+    "temp" : {"low": 18.0, "high": 25.0},
+    "humidity" : { "low": 45.0, "high": 75.0},
+    "light" : {"low" : 600.0, "high": 1200.0},
+    "soil" : {"low": 25.0, "high": 45.0 },
+}
 
-USE_MOCK = True # we can set this API TO true when is ready
+def metric_in_range(label, value, low, high, unit=""):
+    #in range will show ok, green pill
+    if low <= value <= high:
+        st.metric(label, f"{value:.1f}{unit}", "Within range", delta_color="normal")
+        return
 
-def get_upper_plants_data_func():
-    """
-    Returns
-    current: dict of last readings
-    target: target values
-    history: DataFrame is index for charts by time
-    """
-    if USE_MOCK:
-        #current reading will be read
-        time_series = pd.date_range(datetime.now() - timedelta(hours=24), periods=10, freq="H")
+        #  below range, read pill
+    if value < low:
+        diff = value - low  # negative
+        st.metric(label, f"{value:.1f}{unit}", f"{diff:+.1f}{unit} Extreme Condition", delta_color="normal")
+        return
 
-        history = pd.DataFrame({
-            "temp_c: ": 24 + np.cumsum(np.random.normal(0, 0.012, len(time_series))),
-        }, index=time_series)
-
-        current = {
-            "temp_c": history["temp_c"].iloc[-1],
-        }
-
-        target = {"temp_c" : 25.0}
-        return current, target,history
+        #  above range, red pill
+    diff = value - high  # positive
+    st.metric(label, f"{value:.1f}{unit}", f"{diff:+.1f}{unit} above max", delta_color="inverse")
 
 
-def metric_vs_target_alert_func(label, value, low, high, target, unit=""):
-    """
-    ## ideally make fixed metrics so that we can analyze under those metrics ranges
-   green alert" [low range  > green alert for good <  high range  ]
-    """
+
+#mock with import rand library for values, later will be replace with db sensor data
+light = random.randint(600, 1200)
+soil = random.uniform(10, 60)
 
 
 section_header_function("Upper Plants", HANGING_POT_ICON)
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    st.metric("Temperature", "24.3°C", "+0.6°C")
+    rule = UPPER_ZONE_RULES["temp"]
+    metric_in_range("Temperature", temp, rule["low"], rule["high"], "C")
 with k2:
-    st.metric("Humidity", "60%", "-2%")
+    rule = UPPER_ZONE_RULES["humidity"]
+    metric_in_range("Humidity", humidity, rule["low"], rule["high"], "%")
 with k3:
-    st.metric("Light", "820 lx", "+40 lx")
+    rule = UPPER_ZONE_RULES["light"]
+    metric_in_range("Light", light, rule["low"], rule["high"], "lx")
+
 with k4:
-    st.metric("Soil Moisture", "5.5%", "-0.5% from target")
+    rule = UPPER_ZONE_RULES["soil"]
+    metric_in_range("Soil", soil, rule["low"], rule["high"], "%")
 
 
+hours = pd.date_range(end=pd.Timestamp.now(), periods=24, freq="H")
+temp_series = np.random.normal(22,2,24)
+
+df = pd.DataFrame({
+    "time": hours,
+    "Temperature": temp_series,
+    "Humidity": humidity,
+})
+
+
+c1, c2 = st.columns(2)
+
+
+
+
+with c1:
+    fig = px.line(df, x="time", y="Temperature", template="plotly_dark", title="Temperature (°C)")
+    st.plotly_chart(fig, use_container_width=True)
+
+with c2:
+    fig = px.line(df, x="time", y="Humidity", template="plotly_dark", title="Humidity (%)")
+    st.plotly_chart(fig, use_container_width=True)
+
+c3, c4 = st.columns(2)
+
+#gauge
+
+value = soil
+with c3:
+    value = soil
+
+    with c3:
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=value,
+            title={
+                'text': "Soil (%)",
+                'font': {'size': 22, 'color': '#2F4F4F'}
+            },
+            number={'font': {'size': 40, 'color': '#2F4F4F'}},
+            gauge={
+                'axis': {
+                    'range': [0, 100],
+                    'tickwidth': 1,
+                    'tickcolor': '#A9A9A9'
+                },
+                'bar': {'color': '#4C78A8'},
+                'bgcolor': 'white',
+                'borderwidth': 1.5,
+                'bordercolor': '#D3D3D3',
+                'steps': [
+                    {'range': [0, 50], 'color': '#E5E8E8'},
+                    {'range': [50, 80], 'color': '#C8D6E5'},
+                    {'range': [80, 100], 'color': '#A3C1AD'}
+                ],
+                'threshold': {
+                    'line': {'color': '#FF6F61', 'width': 4},
+                    'thickness': 0.75,
+                    'value': 90
+                }
+            }
+        ))
+
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',  # fully transparent
+            plot_bgcolor='rgba(0,0,0,0)',  # transparent plot area
+            font={'color': 'white'}  # match dark theme
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
