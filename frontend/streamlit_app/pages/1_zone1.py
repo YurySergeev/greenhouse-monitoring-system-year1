@@ -32,6 +32,7 @@ TEMP_ICON = get_icon("temperature.png")
 HUMIDITY_ICON = get_icon("humidity.png")
 SOIL_MOISTURE_ICON = get_icon("soil.png")
 HANGING_POT_ICON = get_icon("hanging-pot.png")
+GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 
 
 # Hide page from sidebar
@@ -161,7 +162,7 @@ with col2:
 
 with col3:
     if weather is not None:
-        metric_box_style("Weather🌤️", weather.capitalize(), "#57360b")
+        metric_box_style("Weather 🌤️", weather.capitalize(), "#57360b")
     else:
         metric_box_style("Weather🌤️", "N/A", "#57360b")
 
@@ -306,9 +307,9 @@ with c3:
             value=value,
             title={
                 'text': "Soil (%)",
-                'font': {'size': 22, 'color': '#2F4F4F'}
+                'font': {'size': 22, 'color': '#636efb'}
             },
-            number={'font': {'size': 40, 'color': '#2F4F4F'}},
+            number={'font': {'size': 40, 'color': '#636efb'}},
             gauge={
                 'axis': {
                     'range': [0, 100],
@@ -339,3 +340,26 @@ with c3:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+
+    with c4:
+        st.markdown("""
+        <div style="
+            background-color:none;
+            padding:30px;
+            border-radius:12px;
+            text-align:center;
+            border:1px ;
+        ">
+            <h3 style="margin-bottom:10px;">Light (lx)</h3>
+            <p style="color:#9CA3AF; font-size:14px;">
+            
+                Dashboard coming soon.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+st.markdown("---")
+
+section_header_function("Ground Plants", GROUND_PLANTS_ICON)
