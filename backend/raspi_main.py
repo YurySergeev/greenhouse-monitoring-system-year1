@@ -6,8 +6,9 @@ import machine
 import rp2
 import sys
 
-ssid = "MyNet"
-password = '123456789'
+ssid = "MyNet"         #Network Name
+password = '123456789' #Network Password
+
 
 
 def connect():
