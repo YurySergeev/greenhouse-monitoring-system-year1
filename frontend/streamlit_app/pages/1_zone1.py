@@ -95,8 +95,7 @@ st.write("API key preview:", (API_KEY[:4] + "..." + API_KEY[-4:]) if API_KEY els
 
 # ----------------------------
 # Weather: OpenWeather (cached to avoid 429)
-# ----------------------------
-
+# ---------------------------
 from streamlit_autorefresh import st_autorefresh
 st_autorefresh(interval=300_000, key="refresh_5min")  # 5 minutes
 
@@ -145,12 +144,21 @@ def fetch_weather_data(api_key: str, city: str):
 # ----------------------------
 # Mongo: latest reading (cached)
 # ----------------------------
+
+import certifi
+from pymongo import MongoClient
+
 @st.cache_data(ttl=15)
 def load_latest_reading(zone="zone1", area="upper_plants", source="openweather"):
     if not MONGO_URI or not DB_NAME:
         return None
 
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(
+        MONGO_URI,
+        tls=True,
+        tlsCAFile=certifi.where()
+    )
+
     db = client[DB_NAME]
 
     doc = db.readings.find_one(
@@ -164,6 +172,7 @@ def load_latest_reading(zone="zone1", area="upper_plants", source="openweather")
 
     if doc:
         doc["_id"] = str(doc["_id"])
+
     return doc
 
 # ----------------------------
@@ -200,6 +209,14 @@ with st.expander("Debug: Weather sources", expanded=False):
     st.write("Mongo latest:", mongo_latest)
     st.write("API debug:", api_debug)
     st.write("Final values:", {"temp": temp, "humidity": humidity, "weather": weather})
+
+
+
+def weaather_conditions_func():
+    weather_images = {
+        "Mist": ""
+    }
+
 
 # ----------------------------
 # Metric cards HTML
