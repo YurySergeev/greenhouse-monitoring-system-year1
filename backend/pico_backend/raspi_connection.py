@@ -1,6 +1,6 @@
 import network
 import time
-import dht
+#import dht
 import machine
 import urequests # requests library
 
@@ -13,8 +13,8 @@ SSID = "MyNet"
 PASSWORD = "123456789"
 
 
-# ipconfig in cmd to find your ip
-SERVER_URL = "http://10.123.164.137:5000/data" 
+# ipconfig in cmd to find your ipv4
+SERVER_URL = "http://10.97.196.137:5000/data" 
 
 # Initialize the DHT11 sensor
 #-------Temporary sensor comment out

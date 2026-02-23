@@ -5,6 +5,8 @@ app = Flask(__name__)
 # This route listens for POST requests at the /data endpoint
 @app.route('/data', methods=['POST'])
 def receive_data():
+    
+    print("waiting for data...")
     # Parse the incoming JSON from the Pico W
     incoming_json = request.get_json()
     
@@ -18,6 +20,11 @@ if __name__ == '__main__':
     # host='0.0.0.0' is CRITICAL. It allows devices on your local Wi-Fi 
     # to access this server, not just your local machine.
     app.run(host='0.0.0.0', port=5000)
+    
+    
+    print("Server started ... ")
+    
+    
     while True:
         receive_data()
     
