@@ -102,42 +102,52 @@ st_autorefresh(interval=300_000, key="refresh_5min")  # 5 minutes
 
 CITY = "Akron,US"  # more reliable than just Akron
 
-@st.cache_data(ttl=300)  # cache 5 minutes
+
+#will prevent the hit the api everytime the page reruns
+@st.cache_data(ttl=300)  # cache expires after 300 seconds = 5 minutes
 def fetch_weather_data(api_key: str, city: str):
     if not api_key:
-        return None, None, None, {"error": "Missing OPENWEATHER_API_KEY"}
+        return None, None, None, {"error": "Missing OPENWEATHER_API_KEY"} #safety check
 
+    #build the api url
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=imperial&appid={api_key}"
 
     try:
-        resp = requests.get(url, timeout=10)
-        debug = {
+        resp = requests.get(url, timeout=10) #send the GET api request
+        debug = { #debug object
             "url": url,
             "status_code": resp.status_code,
             "text_preview": resp.text[:300],
         }
 
+        #handle non-200 response, if the city is invalid, api is wrong
         if resp.status_code != 200:
             return None, None, None, debug
-
+        #parse json converting response text into a ptython dic
         data = resp.json()
 
+        #extract fields
         main = data.get("main") or {}
         weather_arr = data.get("weather") or [{}]
 
+        #extract values
         temp_f = main.get("temp")
         humidity = main.get("humidity")
         desc = (weather_arr[0] or {}).get("description")
 
+        #if api response changed its json format  -> throws errors
         if temp_f is None or humidity is None or desc is None:
             debug["parse_error"] = "Missing expected fields in JSON"
             debug["json_keys"] = list(data.keys())
             return None, None, None, debug
 
+        #convert fah to cel
         temp_c = fahrenheitToCelsius(temp_f)
 
+        #succefully return this
         return temp_c, humidity, desc, debug
 
+    #exception handling if json is broken, request timeout or no internet
     except Exception as e:
         return None, None, None, {"error": str(e)}
 
@@ -148,32 +158,41 @@ def fetch_weather_data(api_key: str, city: str):
 import certifi
 from pymongo import MongoClient
 
+#cache this function for 15 seconds
 @st.cache_data(ttl=15)
 def load_latest_reading(zone="zone1", area="upper_plants", source="openweather"):
-    if not MONGO_URI or not DB_NAME:
+    #if variables are missing to try to make connection
+    if not MONGO_URI or not DB_NAME: #safety check
         return None
-
+    #create monogo client
+    #Mongo db atltas
+    #secure cloud db connection
     client = MongoClient(
-        MONGO_URI,
-        tls=True,
-        tlsCAFile=certifi.where()
+        MONGO_URI, #connect the string
+        tls=True, #ecnvyprted the connection
+        tlsCAFile=certifi.where() #validation
     )
 
+    #select db = greenhouse_+db
     db = client[DB_NAME]
 
+    #querying collectiob for db
     doc = db.readings.find_one(
-        {
+        { #filter
             "zone": zone,
             "area": area,
             "source": source
         },
-        sort=[("ts", -1)]
+        sort=[("ts", -1)] #sort by timestamp , descending order, newest first
     )
 
+    #mongo db _id is an object
+    #the id will be convert into a string
+    #if not gives the string convertion, json will give error
     if doc:
         doc["_id"] = str(doc["_id"])
 
-    return doc
+    return doc #retutn the document, or nothing if is not found
 
 # ----------------------------
 # Choose data source:
