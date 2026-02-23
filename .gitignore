@@ -39,3 +39,7 @@ gitignore.save
 # =====================
 .env
 .env.*
+
+# local caches
+backend/.cache.sqlite
+*.sqlite

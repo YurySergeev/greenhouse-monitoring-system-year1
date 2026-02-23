@@ -5,6 +5,9 @@ import os
 from streamlit import subheader
 import requests
 import time
+
+from tenacity import stop_never
+
 from utils.conversion import fahrenheitToCelsius
 from dotenv import load_dotenv
 from pathlib import Path
@@ -22,11 +25,36 @@ import random # this will generate random numbers to use it as mmock for hecking
 import plotly.express as px
 import plotly.graph_objects as go #gauge chart
 
+#----------------------------- database down here
+from pymongo import MongoClient
+from dotenv import load_dotenv
+#-------------------------------
 
 
+from dotenv import load_dotenv, find_dotenv
 
+
+#  utilities
+# from utils.conversion import fahrenheitToCelsius
+# from utils.icons import get_icon  # assuming you have this
+# NOTE: keep  imports as they are in your project
+
+# ----------------------------
+# Config / Env
+# ----------------------------
+st.set_page_config(page_title="Zones", layout="wide")
+
+# Load .env ONCE, robustly (finds it up the folder tree)
+load_dotenv(find_dotenv())
+
+API_KEY = (os.getenv("OPENWEATHER_API_KEY") or "").strip()
+MONGO_URI = (os.getenv("MONGO_URI") or "").strip()
+DB_NAME = (os.getenv("DB_NAME") or "").strip()
+
+# ----------------------------
+# Icons (keep your get_icon)
+# ----------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
 
 TEMP_ICON = get_icon("temperature.png")
 HUMIDITY_ICON = get_icon("humidity.png")
@@ -34,142 +62,208 @@ SOIL_MOISTURE_ICON = get_icon("soil.png")
 HANGING_POT_ICON = get_icon("hanging-pot.png")
 GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 
-
-# Hide page from sidebar
+# ----------------------------
+# Hide page from sidebar (your CSS)
+# ----------------------------
 st.markdown(
     """
     <style>
-    /* Hide only the second page (zone1) */
-    [data-testid="stSidebarNav"] ul li:nth-child(2) {
-        display: none;
-    }
+    [data-testid="stSidebarNav"] ul li:nth-child(2) { display: none; }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-st.set_page_config(page_title="Zones", layout="wide")
+# ----------------------------
+# UI header
+# ----------------------------
 st.title("Zone 1 General metrics")
 st.sidebar.caption("Zone 1 navigation")
 
-# Sidebar for zone 1
 zone1_selection = st.sidebar.selectbox(
     "Select a metric for zone 1",
     ["Dashboard", "Analytics", "Zone 1 Alerts"],
     index=0
 )
 
-# Last updated timestamp (only once)
 st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-# Load environment variables
-env_path = Path(__file__).resolve().parents[1] / ".env"
-load_dotenv(env_path)
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
-
+# Debug: confirm env loaded
 st.write("API Key", bool(API_KEY))
+st.write("API key length:", len(API_KEY) if API_KEY else None)
+st.write("API key preview:", (API_KEY[:4] + "..." + API_KEY[-4:]) if API_KEY else None)
 
-CITY = "Akron"
-url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY}&units=imperial&appid={API_KEY}"
+# ----------------------------
+# Weather: OpenWeather (cached to avoid 429)
+# ----------------------------
+
+from streamlit_autorefresh import st_autorefresh
+st_autorefresh(interval=300_000, key="refresh_5min")  # 5 minutes
 
 
-def fetch_weather_data():
+CITY = "Akron,US"  # more reliable than just Akron
+
+@st.cache_data(ttl=300)  # cache 5 minutes
+def fetch_weather_data(api_key: str, city: str):
+    if not api_key:
+        return None, None, None, {"error": "Missing OPENWEATHER_API_KEY"}
+
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=imperial&appid={api_key}"
+
     try:
-        response = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10)
+        debug = {
+            "url": url,
+            "status_code": resp.status_code,
+            "text_preview": resp.text[:300],
+        }
 
-        if response.status_code != 200:
-            st.error(f"Weather API failed with status code: {response.status_code}")
-            return None, None, None
+        if resp.status_code != 200:
+            return None, None, None, debug
 
-        data = response.json()
+        data = resp.json()
 
-        if "main" not in data:
-            st.error("Weather API response is missing 'main' key")
-            return None, None, None
+        main = data.get("main") or {}
+        weather_arr = data.get("weather") or [{}]
 
-        # Get temperature in Fahrenheit from API
-        temp_f = data["main"]["temp"]
-        # Convert to Celsius
+        temp_f = main.get("temp")
+        humidity = main.get("humidity")
+        desc = (weather_arr[0] or {}).get("description")
+
+        if temp_f is None or humidity is None or desc is None:
+            debug["parse_error"] = "Missing expected fields in JSON"
+            debug["json_keys"] = list(data.keys())
+            return None, None, None, debug
+
         temp_c = fahrenheitToCelsius(temp_f)
-        humidity = data["main"]["humidity"]
-        weather = data["weather"][0]["description"]
 
-        return temp_c, humidity, weather
+        return temp_c, humidity, desc, debug
 
     except Exception as e:
-        st.error(f"Error fetching weather data: {str(e)}")
-        return None, None, None
+        return None, None, None, {"error": str(e)}
 
+# ----------------------------
+# Mongo: latest reading (cached)
+# ----------------------------
+@st.cache_data(ttl=15)
+def load_latest_reading(zone="zone1", area="upper_plants", source="openweather"):
+    if not MONGO_URI or not DB_NAME:
+        return None
 
-# Fetch and display weather data
-temp, humidity, weather = fetch_weather_data()
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
 
-# Columns for metrics
-col1, col2, col3, col4 = st.columns(4)
+    doc = db.readings.find_one(
+        {
+            "zone": zone,
+            "area": area,
+            "source": source
+        },
+        sort=[("ts", -1)]
+    )
 
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
 
-import textwrap
+# ----------------------------
+# Choose data source:
+# Mongo first if it has values, otherwise API fallback
+# ----------------------------
+mongo_latest = load_latest_reading(
+    zone="zone1",
+    area="upper_plants",
+    source="openweather"
+)
+api_temp, api_humidity, api_weather, api_debug = fetch_weather_data(API_KEY, CITY)
 
+# Start with API values
+temp = api_temp
+humidity = api_humidity
+weather = api_weather
+
+# Override ONLY when mongo doc exists AND has values
+if mongo_latest:
+    mongo_temp = mongo_latest.get("temp_c")
+    mongo_humidity = mongo_latest.get("humidity_pct")
+    mongo_weather = mongo_latest.get("weather_desc") or mongo_latest.get("weather")
+
+    if mongo_temp is not None:
+        temp = mongo_temp
+    if mongo_humidity is not None:
+        humidity = mongo_humidity
+    if mongo_weather is not None:
+        weather = mongo_weather
+
+# Debug info (remove later)
+with st.expander("Debug: Weather sources", expanded=False):
+    st.write("Mongo latest:", mongo_latest)
+    st.write("API debug:", api_debug)
+    st.write("Final values:", {"temp": temp, "humidity": humidity, "weather": weather})
+
+# ----------------------------
+# Metric cards HTML
+# ----------------------------
 def metric_box_style(title, value, color, icon=None):
     icon_html = ""
     if icon:
         icon_html = f'<img src="data:image/png;base64,{icon}" style="width:40px;height:40px;">'
 
     html = f"""
-<div style="
-    background-color: {color};
-    padding: 18px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.12);
-    color: white;
-">
-  <div style="
-      font-size: 30px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-  ">
-    {icon_html}
-    <span>{title}</span>
-    
-  </div>
+    <div style="
+        background-color: {color};
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.12);
+        color: white;
+    ">
+      <div style="
+          font-size: 30px;
+          font-weight: 700;
+          margin-bottom: 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+      ">
+        {icon_html}
+        <span>{title}</span>
+      </div>
 
-  <div style="
-      font-size: 32px;
-      font-weight: 800;
-  ">
-    {value}
-  </div>
-</div>
-"""
+      <div style="
+          font-size: 32px;
+          font-weight: 800;
+      ">
+        {value}
+      </div>
+    </div>
+    """
     st.markdown(textwrap.dedent(html), unsafe_allow_html=True)
 
+# ----------------------------
+# Layout / Display
+# ----------------------------
+col1, col2, col3, col4 = st.columns(4)
 
-# Display metrics
 with col1:
     if temp is not None:
-        metric_box_style("Temperature ", f"{temp:.1f}°C", "#131b59", TEMP_ICON)
+        metric_box_style("Temperature", f"{float(temp):.1f}°C", "#131b59", TEMP_ICON)
     else:
-        metric_box_style("Temperature", "N/A", "#131b59")
+        metric_box_style("Temperature", "N/A", "#131b59", TEMP_ICON)
 
 with col2:
     if humidity is not None:
         metric_box_style("Humidity", f"{humidity}%", "#edaf10", HUMIDITY_ICON)
     else:
-        metric_box_style("Humidity", "N/A", "#edaf10")
+        metric_box_style("Humidity", "N/A", "#edaf10", HUMIDITY_ICON)
 
 with col3:
     if weather is not None:
-        metric_box_style("Weather 🌤️", weather.capitalize(), "#57360b")
+        metric_box_style("Weather 🌤️", str(weather).capitalize(), "#57360b")
     else:
-        metric_box_style("Weather🌤️", "N/A", "#57360b")
+        metric_box_style("Weather 🌤️", "N/A", "#57360b")
 
 with col4:
-    # Placeholder for soil moisture (replace with actual data)
     metric_box_style("Soil Moisture", "5.5%", "#2e6b3e", SOIL_MOISTURE_ICON)
-
 
 
 ####### SECTION HEASDER FOR HANGING PLANTS #############
@@ -231,6 +325,7 @@ UPPER_ZONE_RULES = {
 
 def metric_in_range(label, value, low, high, unit=""):
     #in range will show ok, green pill
+    '''
     if low <= value <= high:
         st.metric(label, f"{value:.1f}{unit}", "Within range", delta_color="normal")
         return
@@ -244,122 +339,200 @@ def metric_in_range(label, value, low, high, unit=""):
         #  above range, red pill
     diff = value - high  # positive
     st.metric(label, f"{value:.1f}{unit}", f"{diff:+.1f}{unit} above max", delta_color="inverse")
+    '''
 
 
+# ---------------------------
+# UPPER PLANTS (Zone 1)
+# ---------------------------
+import os
+import pandas as pd
+import streamlit as st
+from pymongo import MongoClient
+import plotly.express as px
+import plotly.graph_objects as go
 
-#mock with import rand library for values, later will be replace with db sensor data
-light = random.randint(600, 1200)
-soil = random.uniform(10, 60)
+ZONE = "zone1"
+AREA = "upper_plants"
+SOURCE = "openweather"   # IMPORTANT: matches your inserted docs
 
+# ---- Load latest reading (OpenWeather) ----
+@st.cache_data(ttl=15)
+def load_latest(zone, area, source):
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db = client[os.getenv("DB_NAME")]
+    doc = db.readings.find_one(
+        {"zone": zone, "area": area, "source": source},
+        sort=[("ts", -1)]
+    )
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
 
+latest = load_latest(ZONE, AREA, SOURCE)
+
+# Pull values from latest (OpenWeather fields)
+temp = latest.get("temp_c") if latest else None
+humidity = latest.get("humidity_pct") if latest else None
+weather = latest.get("weather_desc") if latest else None
+
+# These do NOT exist in OpenWeather docs yet (keep None until sensors are ingested)
+light = None
+soil = None
+
+# ---- Load history for charts (OpenWeather) ----
+@st.cache_data(ttl=60)
+def load_history(zone, area, source, hours=24):
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db = client[os.getenv("DB_NAME")]
+    since = pd.Timestamp.utcnow() - pd.Timedelta(hours=hours)
+
+    docs = list(
+        db.readings.find(
+            {
+                "zone": zone,
+                "area": area,
+                "source": source,
+                "ts": {"$gte": since.to_pydatetime()}
+            },
+            {"_id": 0, "ts": 1, "temp_c": 1, "humidity_pct": 1, "weather_desc": 1}
+        ).sort("ts", 1)
+    )
+
+    df = pd.DataFrame(docs)
+    if not df.empty and "ts" in df.columns:
+        df["ts"] = pd.to_datetime(df["ts"])
+    return df
+
+hist_df = load_history(ZONE, AREA, SOURCE)
+
+# ---- Section header ----
 section_header_function("Upper Plants", HANGING_POT_ICON)
 
+# ---- Metrics row ----
 k1, k2, k3, k4 = st.columns(4)
+
 with k1:
-    rule = UPPER_ZONE_RULES["temp"]
-    metric_in_range("Temperature", temp, rule["low"], rule["high"], "C")
+    if temp is None:
+        st.metric("Temperature", "N/A")
+    else:
+        st.metric("Temperature", f"{float(temp):.1f} °C")
+
 with k2:
-    rule = UPPER_ZONE_RULES["humidity"]
-    metric_in_range("Humidity", humidity, rule["low"], rule["high"], "%")
+    if humidity is None:
+        st.metric("Humidity", "N/A")
+    else:
+        st.metric("Humidity", f"{float(humidity):.0f} %")
+
 with k3:
-    rule = UPPER_ZONE_RULES["light"]
-    metric_in_range("Light", light, rule["low"], rule["high"], "lx")
+    # placeholder until sensors exist
+    st.metric("Light", "N/A")
 
 with k4:
-    rule = UPPER_ZONE_RULES["soil"]
-    metric_in_range("Soil", soil, rule["low"], rule["high"], "%")
+    # placeholder until sensors exist
+    st.metric("Soil", "N/A")
 
 
-hours = pd.date_range(end=pd.Timestamp.now(), periods=24, freq="H")
-temp_series = np.random.normal(22,2,24)
-
-df = pd.DataFrame({
-    "time": hours,
-    "Temperature": temp_series,
-    "Humidity": humidity,
-})
-
-
+# ---- Charts ----
 c1, c2 = st.columns(2)
 
-
-
-
 with c1:
-    fig = px.line(df, x="time", y="Temperature", template="plotly_dark", title="Temperature (°C)")
-    st.plotly_chart(fig, use_container_width=True)
+    if not hist_df.empty and "temp_c" in hist_df.columns and hist_df["temp_c"].notna().any():
 
-with c2:
-    fig = px.line(df, x="time", y="Humidity", template="plotly_dark", title="Humidity (%)")
-    st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure()
 
-c3, c4 = st.columns(2)
-
-#gauge
-
-value = soil
-with c3:
-    value = soil
-
-    with c3:
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=value,
-            title={
-                'text': "Soil (%)",
-                'font': {'size': 22, 'color': '#636efb'}
-            },
-            number={'font': {'size': 40, 'color': '#636efb'}},
-            gauge={
-                'axis': {
-                    'range': [0, 100],
-                    'tickwidth': 1,
-                    'tickcolor': '#A9A9A9'
-                },
-                'bar': {'color': '#4C78A8'},
-                'bgcolor': 'white',
-                'borderwidth': 1.5,
-                'bordercolor': '#D3D3D3',
-                'steps': [
-                    {'range': [0, 50], 'color': '#E5E8E8'},
-                    {'range': [50, 80], 'color': '#C8D6E5'},
-                    {'range': [80, 100], 'color': '#A3C1AD'}
-                ],
-                'threshold': {
-                    'line': {'color': '#FF6F61', 'width': 4},
-                    'thickness': 0.75,
-                    'value': 90
-                }
-            }
+        fig.add_trace(go.Scatter(
+            x=hist_df["ts"],
+            y=hist_df["temp_c"],
+            mode="lines+markers",        # straight line + dots
+            line=dict(shape="linear"),   # explicitly linear
+            name="Temperature"
         ))
 
         fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',  # fully transparent
-            plot_bgcolor='rgba(0,0,0,0)',  # transparent plot area
-            font={'color': 'white'}  # match dark theme
+            template="plotly_dark",
+            title="Temperature (°C)",
+            xaxis_title="Time",
+            yaxis_title="°C",
+            hovermode="x unified"
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
+    else:
+        st.info("No temperature history yet (from openweather).")
 
-    with c4:
-        st.markdown("""
-        <div style="
-            background-color:none;
-            padding:30px;
-            border-radius:12px;
-            text-align:center;
-            border:1px ;
-        ">
-            <h3 style="margin-bottom:10px;">Light (lx)</h3>
-            <p style="color:#9CA3AF; font-size:14px;">
-            
-                Dashboard coming soon.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+with c2:
+    if not hist_df.empty and "humidity_pct" in hist_df.columns and hist_df["humidity_pct"].notna().any():
+        fig = px.line(
+            hist_df, x="ts",
+            y="humidity_pct",
+            template="plotly_dark",
+            title="Humidity (%)",
+             markers=True
+        )
 
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No humidity history yet (from openweather).")
+
+
+# ---- Gauge + Light placeholder ----
+c3, c4 = st.columns(2)
+
+with c3:
+    # soil gauge is ONLY when sensors exist
+    st.info("Soil gauge will show once sensors are ingested (source='sensors').")
+
+with c4:
+    st.markdown("""
+    <div style="
+        background-color:none;
+        padding:30px;
+        border-radius:12px;
+        text-align:center;
+        border:1px ;
+    ">
+        <h3 style="margin-bottom:10px;">Light (lx)</h3>
+        <p style="color:#9CA3AF; font-size:14px;">
+            Dashboard coming soon.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ---- Table: show readings for this zone/area/source ----
+@st.cache_data(ttl=30)
+def load_readings(zone, area, source, limit=50):
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db = client[os.getenv("DB_NAME")]
+    docs = list(
+        db.readings.find(
+            {"zone": zone, "area": area, "source": source},
+            {"raw": 0}
+        ).sort("ts", -1).limit(limit)
+    )
+    for d in docs:
+        d["_id"] = str(d["_id"])
+    return docs
+
+st.subheader("Adjust the data")
+
+show_latest_only = st.toggle("Default: shows latest data only", value=True)
+
+if show_latest_only:
+    limit = 1
+else:
+    limit = st.slider("Rows", min_value=1, max_value=90, value=20, step=1)
+
+docs = load_readings(ZONE, AREA, SOURCE, limit=limit)
+table_df = pd.DataFrame(docs)
+
+if table_df.empty:
+    st.info("No readings found for upper plants yet.")
+else:
+    if "ts" in table_df.columns:
+        table_df["ts"] = pd.to_datetime(table_df["ts"])
+    st.dataframe(table_df, use_container_width=True)
 
 st.markdown("---")
-
-section_header_function("Ground Plants", GROUND_PLANTS_ICON)
