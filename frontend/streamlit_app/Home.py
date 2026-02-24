@@ -4,10 +4,55 @@ import requests
 import time
 from operator import index
 from pathlib import Path
+import matplotlib.colors as plt
 
 # bblue : 131b59
 # yellow: edaf10
 # brown: 57360b
+# colors: 
+# really like: coffee & greenish grey (earth day vibes), dark sage & greenish grey
+# potentially implement themes: go flashes!, earth day vibes, feeling green, etc
+
+# Define themes
+THEMES = {
+    "Earth Day Vibes": {
+        "background": "xkcd:greenish grey",
+        "sidebar": "xkcd:coffee",
+        "title": "xkcd:coffee",
+        "boxes": "xkcd:coffee",
+        "top_bar": "xkcd:coffee",
+        "text_color": "#ffffff"
+    },
+    "Feeling Green": {
+        "background": "xkcd:greenish grey",
+        "sidebar": "xkcd:dark sage",
+        "title": "xkcd:dark sage",
+        "boxes": "xkcd:dark sage",
+        "top_bar": "xkcd:dark sage",
+        "text_color": "#ffffff"
+    },
+    "Go Flashes!": {
+        "background": "xkcd:white",
+        "sidebar": "xkcd:blue",
+        "title": "xkcd:blue",
+        "boxes": "xkcd:blue",
+        "top_bar": "xkcd:blue",
+        "text_color": "#ffd700"
+    }
+}
+
+# Initialize session state for theme
+if "theme" not in st.session_state:
+    st.session_state.theme = "Earth Day Vibes"
+
+# Get current theme colors
+current_theme = THEMES[st.session_state.theme]
+background_color = plt.XKCD_COLORS[current_theme["background"]]
+sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
+title_color = plt.XKCD_COLORS[current_theme["title"]]
+boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
+top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
+text_color = current_theme["text_color"]
 
 # Setup paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -19,60 +64,63 @@ IMG_GREENHOUSE = ASSETS_DIR / "greenhouse2.jpg"
 st.set_page_config(page_title="Greenhouse Home", layout="wide", initial_sidebar_state="expanded")
 
 # --------------- styling for divs ---------------------
-st.markdown("""
+st.markdown(f"""
 
 <style>
-.block-container { max-width: 1100px; padding-top: 2rem; }
+.block-container {{ max-width: 1100px; padding-top: 2rem; }}
 
-
+/*sets background color*/
+.stApp {{
+    background-color: {background_color};
+}}
 
 
 /*title style*/
-.ksuTitle {
+.ksuTitle {{
 padding: 26px, 26px, 20px 286px;
 border-radius: 18px;
-background: #edaf10;
+background: {title_color};
 box-shadow: 0, 10px 30px, rgba(0,0,0,0.35);
 margin-bottom: 10px;
 text-align: center;
-}
+}}
 
 
-.ksuTitle h1{
-margin: 0; font-size: 40px; line-height: 1.05;
-}
+.ksuTitle h1{{
+margin: 0; font-size: 40px; line-height: 1.05; color: {text_color};
+}}
 
 /*box description */
-.box{
+.box{{
 padding: 18;
 border-radius: 16px;
-background: #57360b;
+background: {boxes_color};
 border: 1px solid rgba(255,255,255,0.08);
 text-align: center;
-}
+}}
 
-.box h3{
+.box h3{{
 margin: 0 0 10px 0;
 font-size: 25px;
-}
+}}
 
 
-.list{
+.list{{
  opacity: 0.75;
   font-size: 13px;
   margin-bottom: 10px;
-}
+}}
 
-.metrics{
+.metrics{{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
   margin-top:10px;
   justify-content: center;
-}
+}}
 
 /*each small box*/
-.metric{
+.metric{{
 
 padding: 6px 12px;
   border-radius: 999px;
@@ -82,9 +130,14 @@ padding: 6px 12px;
   font-weight: 500;
 
 
-}
+}}
 
-hr { opacity: 0.15; }
+hr {{ opacity: 0.15; }}
+
+/* Top bar */
+[data-testid="stHeader"] {{
+    background-color: {top_bar_color};
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,7 +172,11 @@ st.markdown("""
             )
 
 # subtitle
-st.markdown("<div class='system-description'> What the sensors monitor?</div> ", unsafe_allow_html=True)
+st.markdown(f"""
+<div style="text-align: center; font-size: 28px; margin: 20px 0; color: {text_color};">
+    <span style="letter-spacing: 15px;"> • • </span>&nbsp;What the sensors monitor?&nbsp;<span style="letter-spacing: 15px;"> • • </span>
+</div>
+""", unsafe_allow_html=True)
 left, right = st.columns(2, gap="large")
 
 # left box
@@ -163,24 +220,46 @@ zone_selection = st.sidebar.selectbox(
 if zone_selection == "Zone 1":
     st.switch_page("pages/1_zone1.py")
 
+# Theme selector in sidebar (bottom left)
+st.sidebar.divider()
+if st.sidebar.button("🌿 Change Theme", key="theme_button", help="Cycle through themes", use_container_width=True):
+    # Cycle through themes
+    themes_list = list(THEMES.keys())
+    current_index = themes_list.index(st.session_state.theme)
+    next_index = (current_index + 1) % len(themes_list)
+    st.session_state.theme = themes_list[next_index]
+    st.rerun()
+
 # Greenhouse image centered
 img_col = st.columns([1, 3, 1])[1]
 
 with img_col:
+    st.markdown('<div style="margin-top: 80px;">', unsafe_allow_html=True)
     if IMG_GREENHOUSE.exists():
         st.image(str(IMG_GREENHOUSE), use_container_width=True)
     else:
         st.info("Greenhouse image not found at: " + str(IMG_GREENHOUSE))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Page break with leaf and dots
+st.markdown("""
+<div style="text-align: center; margin: 40px 0; font-size: 24px; letter-spacing: 15px;">
+    • • • • • • 🌱 • • • • • •
+</div>
+""", unsafe_allow_html=True)
 
 # keep this
 # this is to hide the file.py name off the sidebar
-st.markdown(
-    """
+st.markdown(f"""
     <style>
     /* Hide only the second page (zone1) */
-    [data-testid="stSidebarNav"] ul li:nth-child(2) {
+    [data-testid="stSidebarNav"] ul li:nth-child(2) {{
         display: none;
-    }
+    }}
+    /* Change sidebar background color */
+    .stSidebar {{
+        background-color: {sidebar_color};
+    }}
     </style>
     """,
     unsafe_allow_html=True

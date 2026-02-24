@@ -20,6 +20,7 @@ import numpy as np
 from datetime import datetime
 import textwrap
 import random # this will generate random numbers to use it as mmock for hecking status conditions on zone plnat
+import matplotlib.colors as plt
 
 #--------------------------- charts libraries
 import plotly.express as px
@@ -30,9 +31,49 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 #-------------------------------
 
+# Define themes (same as Home.py)
+THEMES = {
+    "Earth Day Vibes": {
+        "background": "xkcd:greenish grey",
+        "sidebar": "xkcd:coffee",
+        "title": "xkcd:coffee",
+        "boxes": "xkcd:coffee",
+        "top_bar": "xkcd:coffee",
+        "text_color": "#ffffff"
+    },
+    "Feeling Green": {
+        "background": "xkcd:greenish grey",
+        "sidebar": "xkcd:dark sage",
+        "title": "xkcd:dark sage",
+        "boxes": "xkcd:dark sage",
+        "top_bar": "xkcd:dark sage",
+        "text_color": "#ffffff"
+    },
+    "Go Flashes!": {
+        "background": "xkcd:white",
+        "sidebar": "xkcd:blue",
+        "title": "xkcd:blue",
+        "boxes": "xkcd:blue",
+        "top_bar": "xkcd:blue",
+        "text_color": "#ffd700"
+    }
+}
+
+# Initialize session state for theme
+if "theme" not in st.session_state:
+    st.session_state.theme = "Earth Day Vibes"
 
 from dotenv import load_dotenv, find_dotenv
 
+# Get current theme colors
+current_theme = THEMES[st.session_state.theme]
+background_color = plt.XKCD_COLORS[current_theme["background"]]
+sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
+title_color = plt.XKCD_COLORS[current_theme["title"]]
+boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
+top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
+text_color = current_theme["text_color"]
+top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
 
 #  utilities
 # from utils.conversion import fahrenheitToCelsius
@@ -62,22 +103,33 @@ SOIL_MOISTURE_ICON = get_icon("soil.png")
 HANGING_POT_ICON = get_icon("hanging-pot.png")
 GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 
-# ----------------------------
-# Hide page from sidebar (your CSS)
-# ----------------------------
-st.markdown(
-    """
+# Hide page from sidebar
+st.markdown(f"""
     <style>
-    [data-testid="stSidebarNav"] ul li:nth-child(2) { display: none; }
+    /* Hide only the second page (zone1) */
+    [data-testid="stSidebarNav"] ul li:nth-child(2) {{
+        display: none;
+    }}
+    
+    /* Apply theme colors */
+    .stApp {{
+        background-color: {background_color};
+    }}
+    
+    [data-testid="stHeader"] {{
+        background-color: {top_bar_color};
+    }}
+    
+    .stSidebar {{
+        background-color: {sidebar_color};
+    }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ----------------------------
-# UI header
-# ----------------------------
-st.title("Zone 1 General metrics")
+st.set_page_config(page_title="Zones", layout="wide")
+st.markdown(f"<h1 style='color: {text_color};'>Zone 1 General metrics</h1>", unsafe_allow_html=True)
 st.sidebar.caption("Zone 1 navigation")
 
 zone1_selection = st.sidebar.selectbox(
@@ -86,6 +138,17 @@ zone1_selection = st.sidebar.selectbox(
     index=0
 )
 
+# Theme selector in sidebar (bottom left)
+st.sidebar.divider()
+if st.sidebar.button("🌿 Change Theme", key="theme_button", help="Cycle through themes", use_container_width=True):
+    # Cycle through themes
+    themes_list = list(THEMES.keys())
+    current_index = themes_list.index(st.session_state.theme)
+    next_index = (current_index + 1) % len(themes_list)
+    st.session_state.theme = themes_list[next_index]
+    st.rerun()
+
+# Last updated timestamp (only once)
 st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # Debug: confirm env loaded
