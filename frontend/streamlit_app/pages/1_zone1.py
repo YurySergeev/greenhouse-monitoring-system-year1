@@ -1,3 +1,4 @@
+from multiprocessing.util import close_all_fds_except
 from urllib import response
 import streamlit as st
 from datetime import datetime, timedelta
@@ -30,9 +31,11 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 #-------------------------------
 
-
 from dotenv import load_dotenv, find_dotenv
 
+# ----- frontend/assets/css
+from pathlib import Path
+from utils.styles import load_css
 
 #  utilities
 # from utils.conversion import fahrenheitToCelsius
@@ -65,6 +68,8 @@ GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 # ----------------------------
 # Hide page from sidebar (your CSS)
 # ----------------------------
+
+
 st.markdown(
     """
     <style>
@@ -80,11 +85,77 @@ st.markdown(
 st.title("Zone 1 General metrics")
 st.sidebar.caption("Zone 1 navigation")
 
-zone1_selection = st.sidebar.selectbox(
-    "Select a metric for zone 1",
-    ["Dashboard", "Analytics", "Zone 1 Alerts"],
-    index=0
-)
+
+
+
+def sidebar_control_func():
+    load_css()  #loads the css
+    st.sidebar.header("Zone 1")
+
+    if "zone1_section" not in st.session_state:
+        st.session_state["zone1_section"] = "Upper Plants"
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("Upper Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Upper Plants"
+
+    with col2:
+        if st.button("Middle Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Middle Plants"
+
+    with col3:
+        if st.button("Ground Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Ground Plants"
+
+    st.sidebar.divider()
+
+    section = st.session_state["zone1_section"]
+    st.sidebar.write(f"Selected: **{section}**")
+
+
+
+    if section == "Upper Plants":
+        st.divider()
+
+        col_controls, col_alerts = st.columns(2) #columns
+
+        with col_controls:
+            with st.container(border=True):
+                st.markdown("#### ⚙️ Controls")
+                unit = st.radio("Temperature Unit", ["°C", "°F"], horizontal=True, label_visibility="collapsed",
+                                key="temp_unit")
+
+        with col_alerts:
+            with st.container(border=True):
+                st.markdown("#### 🚨 Upper Section Alerts")
+                st.write("Coming soon…")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+
+        return section, unit
+
+    return section, None
+
+
+        # upper_plntas_func() #here will live dashboards for upper plants
+
+
+
+
+def main():
+    section, unit = sidebar_control_func()
+
+    st.title("Zone 1 Dashboard")
+    st.write(f"Selected: **{section}**")
+    st.write(f"Unit: {unit}")
+
+if __name__ == "__main__":
+    main()
+
+
+
 
 st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
@@ -572,3 +643,8 @@ else:
     st.dataframe(table_df, use_container_width=True)
 
 st.markdown("---")
+
+
+
+
+

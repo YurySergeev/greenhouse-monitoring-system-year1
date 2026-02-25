@@ -5,6 +5,9 @@ import time
 from operator import index
 from pathlib import Path
 
+from utils.styles import load_css
+load_css()
+
 # bblue : 131b59
 # yellow: edaf10
 # brown: 57360b
@@ -15,6 +18,8 @@ ASSETS_DIR = BASE_DIR / "assets"
 
 LOGO_PATH = ASSETS_DIR / "logo3.png"
 IMG_GREENHOUSE = ASSETS_DIR / "greenhouse2.jpg"
+
+
 
 st.set_page_config(page_title="Greenhouse Home", layout="wide", initial_sidebar_state="expanded")
 
