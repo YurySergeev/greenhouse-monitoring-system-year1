@@ -1,30 +1,43 @@
 from flask import Flask, request, jsonify
+import requests
+from datetime import datetime
 
 app = Flask(__name__)
 
-# This route listens for POST requests at the /data endpoint
+# Mock URL for testing purposes (replace with Casini's API URL when ready)
+MOCK_CASINI_URL = "http://localhost:5001/mock-casini-endpoint"  # Mock URL for testing
+
 @app.route('/data', methods=['POST'])
 def receive_data():
-    
-    print("waiting for data...")
-    # Parse the incoming JSON from the Pico W
+    """
+    Receives data from Raspberry Pi, adds a timestamp, and forwards it to a mock Casini endpoint.
+    """
     incoming_json = request.get_json()
-    
-    # Print it to the computer's terminal so you can see it working
-    print(f"Data received from greenhouse: {incoming_json}")
-    
-    # Send a success message back to the Pico
-    return jsonify({"status": "success", "message": "Data logged safely"}), 200
+
+    if not incoming_json:
+        return jsonify({"status": "error", "message": "No data received"}), 400
+
+    # Print received data for debugging
+    print(f"Data received: {incoming_json}")
+
+    # Add timestamp to the incoming data
+    incoming_json["timestamp"] = datetime.utcnow().isoformat()
+
+    # Mock forward data to Casini (or replace this with actual Casini endpoint)
+    try:
+        # Send the data to a mock endpoint (you will replace this URL with Casini when it's available)
+        response = requests.post(MOCK_CASINI_URL, json=incoming_json)
+        print(f"Data forwarded to mock Casini: {response.status_code}")
+        
+        if response.status_code == 200:
+            return jsonify({"status": "success", "message": "Data forwarded successfully to mock Casini"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Failed to forward data to mock Casini"}), 500
+    except requests.exceptions.RequestException as e:
+        print(f"Error forwarding data: {e}")
+        return jsonify({"status": "error", "message": "Failed to connect to mock Casini"}), 500
 
 if __name__ == '__main__':
-    # host='0.0.0.0' is CRITICAL. It allows devices on your local Wi-Fi 
-    # to access this server, not just your local machine.
+    # Ensure the server is accessible from devices on the local network
     app.run(host='0.0.0.0', port=5000)
-    
-    
-    print("Server started ... ")
-    
-    
-    while True:
-        receive_data()
-    
+    print("Server started on http://0.0.0.0:5000 ...")
