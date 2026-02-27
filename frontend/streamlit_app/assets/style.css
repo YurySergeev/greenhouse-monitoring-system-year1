@@ -1,0 +1,24 @@
+/* Bigger RADIO label ("Temperature Unit") */
+div[data-testid="stRadio"] label p {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+}
+
+/* Bigger RADIO options (°C, °F) */
+div[data-testid="stRadio"] div[role="radiogroup"] label span,
+div[data-testid="stRadio"] div[role="radiogroup"] label p {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+}
+
+/* More spacing between options */
+div[data-testid="stRadio"] div[role="radiogroup"] {
+  gap: 24px !important;
+}
+
+/* Improve bordered containers */
+div[data-testid="stVerticalBlock"] > div:has(> h4) {
+    background: rgba(255,255,255,0.02);
+    border-radius: 16px;
+    padding: 20px;
+}
