@@ -1,7 +1,13 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from multiprocessing.util import close_all_fds_except
 from urllib import response
 import streamlit as st
+
 from datetime import datetime, timedelta
+
 import os
 from streamlit import subheader
 import requests
@@ -36,6 +42,20 @@ from dotenv import load_dotenv, find_dotenv
 # ----- frontend/assets/css
 from pathlib import Path
 from utils.styles import load_css
+#---- render from utils.layout
+
+from utils.layout import (
+    render_zone_header,
+    render_refresh_update,
+    render_api_update,
+    render_metrics_row,
+    render_section_header,
+    HANGING_ICON,
+    dashboard_title_metric_section,
+
+
+)
+from utils.styles import load_css
 
 #  utilities
 # from utils.conversion import fahrenheitToCelsius
@@ -54,122 +74,14 @@ API_KEY = (os.getenv("OPENWEATHER_API_KEY") or "").strip()
 MONGO_URI = (os.getenv("MONGO_URI") or "").strip()
 DB_NAME = (os.getenv("DB_NAME") or "").strip()
 
-# ----------------------------
-# Icons (keep your get_icon)
-# ----------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
-TEMP_ICON = get_icon("temperature.png")
-HUMIDITY_ICON = get_icon("humidity.png")
-SOIL_MOISTURE_ICON = get_icon("soil.png")
-HANGING_POT_ICON = get_icon("hanging-pot.png")
-GROUND_PLANTS_ICON = get_icon("ground_plants.png")
-
-# ----------------------------
-# Hide page from sidebar (your CSS)
-# ----------------------------
-
-
-st.markdown(
-    """
-    <style>
-    [data-testid="stSidebarNav"] ul li:nth-child(2) { display: none; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ----------------------------
-# UI header
-# ----------------------------
-st.title("Zone 1 General metrics")
-st.sidebar.caption("Zone 1 navigation")
 
 
 
 
-def sidebar_control_func():
-    load_css()  #loads the css
-    st.sidebar.header("Zone 1")
-
-    if "zone1_section" not in st.session_state:
-        st.session_state["zone1_section"] = "Upper Plants"
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button("Upper Plants", use_container_width=True):
-            st.session_state["zone1_section"] = "Upper Plants"
-
-    with col2:
-        if st.button("Middle Plants", use_container_width=True):
-            st.session_state["zone1_section"] = "Middle Plants"
-
-    with col3:
-        if st.button("Ground Plants", use_container_width=True):
-            st.session_state["zone1_section"] = "Ground Plants"
-
-    st.sidebar.divider()
-
-    section = st.session_state["zone1_section"]
-    st.sidebar.write(f"Selected: **{section}**")
-
-
-
-    if section == "Upper Plants":
-        st.divider()
-
-        col_controls, col_alerts = st.columns(2) #columns
-
-        with col_controls:
-            with st.container(border=True):
-                st.markdown("#### ⚙️ Controls")
-                unit = st.radio("Temperature Unit", ["°C", "°F"], horizontal=True, label_visibility="collapsed",
-                                key="temp_unit")
-
-        with col_alerts:
-            with st.container(border=True):
-                st.markdown("#### 🚨 Upper Section Alerts")
-                st.write("Coming soon…")
-                st.markdown("<br>", unsafe_allow_html=True)
-
-
-        return section, unit
-
-    return section, None
-
-
-        # upper_plntas_func() #here will live dashboards for upper plants
-
-
-
-
-def main():
-    section, unit = sidebar_control_func()
-
-    st.title("Zone 1 Dashboard")
-    st.write(f"Selected: **{section}**")
-    st.write(f"Unit: {unit}")
-
-if __name__ == "__main__":
-    main()
-
-
-
-
-st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-# Debug: confirm env loaded
-st.write("API Key", bool(API_KEY))
-st.write("API key length:", len(API_KEY) if API_KEY else None)
-st.write("API key preview:", (API_KEY[:4] + "..." + API_KEY[-4:]) if API_KEY else None)
-
-# ----------------------------
-# Weather: OpenWeather (cached to avoid 429)
-# ---------------------------
-from streamlit_autorefresh import st_autorefresh
-st_autorefresh(interval=300_000, key="refresh_5min")  # 5 minutes
-
+#renders title
+render_zone_header("zone 1")
+render_refresh_update()
+render_api_update()
 
 CITY = "Akron,US"  # more reliable than just Akron
 
@@ -302,166 +214,94 @@ with st.expander("Debug: Weather sources", expanded=False):
 
 
 
-def weaather_conditions_func():
-    weather_images = {
-        "Mist": ""
-    }
+render_metrics_row(temp, humidity,weather)
+render_section_header("Hanging Plants Zone1", HANGING_ICON)
+dashboard_title_metric_section()
 
 
-# ----------------------------
-# Metric cards HTML
-# ----------------------------
-def metric_box_style(title, value, color, icon=None):
-    icon_html = ""
-    if icon:
-        icon_html = f'<img src="data:image/png;base64,{icon}" style="width:40px;height:40px;">'
+#section selection, control box and alert box
+def sidebar_control_func():
+    load_css()  #loads the css
+    st.sidebar.header("Zone 1")
 
-    html = f"""
-    <div style="
-        background-color: {color};
-        padding: 18px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.12);
-        color: white;
-    ">
-      <div style="
-          font-size: 30px;
-          font-weight: 700;
-          margin-bottom: 10px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-      ">
-        {icon_html}
-        <span>{title}</span>
-      </div>
+    if "zone1_section" not in st.session_state:
+        st.session_state["zone1_section"] = "Upper Plants"
 
-      <div style="
-          font-size: 32px;
-          font-weight: 800;
-      ">
-        {value}
-      </div>
-    </div>
-    """
-    st.markdown(textwrap.dedent(html), unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3)
 
-# ----------------------------
-# Layout / Display
-# ----------------------------
-col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        if st.button("Upper Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Upper Plants"
 
-with col1:
-    if temp is not None:
-        metric_box_style("Temperature", f"{float(temp):.1f}°C", "#131b59", TEMP_ICON)
-    else:
-        metric_box_style("Temperature", "N/A", "#131b59", TEMP_ICON)
+    with col2:
+        if st.button("Middle Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Middle Plants"
 
-with col2:
-    if humidity is not None:
-        metric_box_style("Humidity", f"{humidity}%", "#edaf10", HUMIDITY_ICON)
-    else:
-        metric_box_style("Humidity", "N/A", "#edaf10", HUMIDITY_ICON)
+    with col3:
+        if st.button("Ground Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Ground Plants"
 
-with col3:
-    if weather is not None:
-        metric_box_style("Weather 🌤️", str(weather).capitalize(), "#57360b")
-    else:
-        metric_box_style("Weather 🌤️", "N/A", "#57360b")
+    st.sidebar.divider()
 
-with col4:
-    metric_box_style("Soil Moisture", "5.5%", "#2e6b3e", SOIL_MOISTURE_ICON)
+    section = st.session_state["zone1_section"]
+    st.sidebar.write(f"Selected: **{section}**")
 
 
-####### SECTION HEASDER FOR HANGING PLANTS #############
-import textwrap
 
-def section_header_function(title: str, icon=None):
-    icon_html = ""
-    if icon:
-        icon_html = (f'<img src="data:image/png;base64,{icon}" '
-                     f'style="width:70px;'
-                     f'height:70px;'
-                     f'object-fit:contain;">')
+    if section == "Upper Plants":
+        st.divider()
 
-    html = f"""
-<div style="display:flex;justify-content:center;
-align-items:center;
-gap:14px;
-margin:35px 0 10px 0;">{icon_html}
-  <h2 style="margin:0;
-  font-weight:500;
-  letter-spacing:0.5px;">{title}</h2>
+        col_controls, col_alerts = st.columns(2) #columns
 
-</div>
+        with col_controls:
+            with st.container(border=True):
+                st.markdown("#### ⚙️ Controls")
+                unit = st.radio("Temperature Unit", ["°C", "°F"], horizontal=True, label_visibility="collapsed",
+                                key="temp_unit")
 
-<div style="width:120px;height:3px;background-color:#1f77b4;margin:10px auto 25px auto;border-radius:2px;"></div>
-"""
-    st.markdown(textwrap.dedent(html), unsafe_allow_html=True)
+        with col_alerts:
+            with st.container(border=True):
+                st.markdown("#### 🚨 Upper Section Alerts")
+                st.write("Coming soon…")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+
+        return section, unit
+
+    return section, None
+
+
+        # upper_plntas_func() #here will live dashboards for upper plants
+
+
+
+def main():
+    section, unit = sidebar_control_func()
 
 
 
 
-#metrics label style -----------------------
-st.markdown("""
-<style>
-[data-testid="stMetricLabel"]{
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #9CA3AF;
-    text-transform: uppercase;
-}
-[data-testid="stMetricLabel"] p{
-    margin-bottom: 6px;
-}
-[data-testid="stMetricValue"]{
-    font-size: 38px;
-    font-weight: 800;
-}
-</style>
-""", unsafe_allow_html=True)
-# -----------------------------------------------
 
-UPPER_ZONE_RULES = {
-    "temp" : {"low": 18.0, "high": 25.0},
-    "humidity" : { "low": 45.0, "high": 75.0},
-    "light" : {"low" : 600.0, "high": 1200.0},
-    "soil" : {"low": 25.0, "high": 45.0 },
-}
-
-def metric_in_range(label, value, low, high, unit=""):
-    #in range will show ok, green pill
-    '''
-    if low <= value <= high:
-        st.metric(label, f"{value:.1f}{unit}", "Within range", delta_color="normal")
-        return
-
-        #  below range, read pill
-    if value < low:
-        diff = value - low  # negative
-        st.metric(label, f"{value:.1f}{unit}", f"{diff:+.1f}{unit} Extreme Condition", delta_color="normal")
-        return
-
-        #  above range, red pill
-    diff = value - high  # positive
-    st.metric(label, f"{value:.1f}{unit}", f"{diff:+.1f}{unit} above max", delta_color="inverse")
-    '''
+if __name__ == "__main__":
+    main()
 
 
-# ---------------------------
-# UPPER PLANTS (Zone 1)
-# ---------------------------
-import os
-import pandas as pd
-import streamlit as st
-from pymongo import MongoClient
-import plotly.express as px
-import plotly.graph_objects as go
+
+
+
+
+
+
+
+
+
+
+
+
 
 ZONE = "zone1"
 AREA = "upper_plants"
-SOURCE = "openweather"   # IMPORTANT: matches your inserted docs
+SOURCE = "openweather"
 
 # ---- Load latest reading (OpenWeather) ----
 @st.cache_data(ttl=15)
@@ -513,8 +353,10 @@ def load_history(zone, area, source, hours=24):
 
 hist_df = load_history(ZONE, AREA, SOURCE)
 
-# ---- Section header ----
-section_header_function("Upper Plants", HANGING_POT_ICON)
+
+
+
+
 
 # ---- Metrics row ----
 k1, k2, k3, k4 = st.columns(4)
@@ -606,6 +448,12 @@ with c4:
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+
+
+
+
+
 
 
 # ---- Table: show readings for this zone/area/source ----

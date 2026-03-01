@@ -1,3 +1,8 @@
+/* Hide second sidebar item */
+[data-testid="stSidebarNav"] ul li:nth-child(2) {
+    display: none;
+}
+
 /* Bigger RADIO label ("Temperature Unit") */
 div[data-testid="stRadio"] label p {
   font-size: 24px !important;
@@ -21,4 +26,46 @@ div[data-testid="stVerticalBlock"] > div:has(> h4) {
     background: rgba(255,255,255,0.02);
     border-radius: 16px;
     padding: 20px;
+}
+
+
+.metric-card{
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: white;
+}
+
+.metric-header{
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-icon{
+  width: 40px;
+  height: 40px;
+}
+
+.metric-value{
+  font-size: 32px;
+  font-weight: 800;
+}
+
+
+/* metrics label style ----------------------- */
+div[data-testid="stMetric"] label {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  color: #9CA3AF !important;
+  text-transform: uppercase !important;
+}
+
+div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+  font-size: 38px !important;
+  font-weight: 800 !important;
 }
