@@ -1,3 +1,4 @@
+from multiprocessing.util import close_all_fds_except
 from urllib import response
 import streamlit as st
 from datetime import datetime, timedelta
@@ -74,6 +75,11 @@ boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
 top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
 text_color = current_theme["text_color"]
 top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
+from dotenv import load_dotenv, find_dotenv
+
+# ----- frontend/assets/css
+from pathlib import Path
+from utils.styles import load_css
 
 #  utilities
 # from utils.conversion import fahrenheitToCelsius
@@ -105,6 +111,13 @@ GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 
 # Hide page from sidebar
 st.markdown(f"""
+# ----------------------------
+# Hide page from sidebar (your CSS)
+# ----------------------------
+
+
+st.markdown(
+    """
     <style>
     /* Hide only the second page (zone1) */
     [data-testid="stSidebarNav"] ul li:nth-child(2) {{
@@ -132,11 +145,77 @@ st.set_page_config(page_title="Zones", layout="wide")
 st.markdown(f"<h1 style='color: {text_color};'>Zone 1 General metrics</h1>", unsafe_allow_html=True)
 st.sidebar.caption("Zone 1 navigation")
 
-zone1_selection = st.sidebar.selectbox(
-    "Select a metric for zone 1",
-    ["Dashboard", "Analytics", "Zone 1 Alerts"],
-    index=0
-)
+
+
+
+def sidebar_control_func():
+    load_css()  #loads the css
+    st.sidebar.header("Zone 1")
+
+    if "zone1_section" not in st.session_state:
+        st.session_state["zone1_section"] = "Upper Plants"
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("Upper Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Upper Plants"
+
+    with col2:
+        if st.button("Middle Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Middle Plants"
+
+    with col3:
+        if st.button("Ground Plants", use_container_width=True):
+            st.session_state["zone1_section"] = "Ground Plants"
+
+    st.sidebar.divider()
+
+    section = st.session_state["zone1_section"]
+    st.sidebar.write(f"Selected: **{section}**")
+
+
+
+    if section == "Upper Plants":
+        st.divider()
+
+        col_controls, col_alerts = st.columns(2) #columns
+
+        with col_controls:
+            with st.container(border=True):
+                st.markdown("#### ⚙️ Controls")
+                unit = st.radio("Temperature Unit", ["°C", "°F"], horizontal=True, label_visibility="collapsed",
+                                key="temp_unit")
+
+        with col_alerts:
+            with st.container(border=True):
+                st.markdown("#### 🚨 Upper Section Alerts")
+                st.write("Coming soon…")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+
+        return section, unit
+
+    return section, None
+
+
+        # upper_plntas_func() #here will live dashboards for upper plants
+
+
+
+
+def main():
+    section, unit = sidebar_control_func()
+
+    st.title("Zone 1 Dashboard")
+    st.write(f"Selected: **{section}**")
+    st.write(f"Unit: {unit}")
+
+if __name__ == "__main__":
+    main()
+
+
+
 
 # Theme selector in sidebar (bottom left)
 st.sidebar.divider()
@@ -635,3 +714,8 @@ else:
     st.dataframe(table_df, use_container_width=True)
 
 st.markdown("---")
+
+
+
+
+
