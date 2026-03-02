@@ -25,6 +25,9 @@ THEMES = {
         "boxes": "xkcd:coffee",
         "top_bar": "xkcd:coffee",
         "text_color": "#ffffff"
+    ,
+        # optional override for specific subtitle color (defaults to text_color)
+        "subtitle": "#ffffff"
     },
     "Feeling Green": {
         "background": "xkcd:greenish grey",
@@ -32,15 +35,17 @@ THEMES = {
         "title": "xkcd:dark sage",
         "boxes": "xkcd:dark sage",
         "top_bar": "xkcd:dark sage",
-        "text_color": "#ffffff"
+        "text_color": "#ffffff",
+        "subtitle": "#ffffff"
     },
     "Go Flashes!": {
-        "background": "xkcd:white",
+        "background": "xkcd:silver",
         "sidebar": "xkcd:blue",
         "title": "xkcd:blue",
         "boxes": "xkcd:blue",
         "top_bar": "xkcd:blue",
-        "text_color": "#ffd700"
+        "text_color": "#ffd700",
+        "subtitle": "xkcd:blue"  
     }
 }
 
@@ -56,6 +61,16 @@ title_color = plt.XKCD_COLORS[current_theme["title"]]
 boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
 top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
 text_color = current_theme["text_color"]
+
+# helper to resolve either raw hex or xkcd color name
+
+def _resolve_color(value):
+    if isinstance(value, str) and value.startswith("xkcd:"):
+        return plt.XKCD_COLORS[value]
+    return value
+
+# subtitle color can be overridden per theme, fallback to text_color
+subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
 
 # Setup paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -178,7 +193,7 @@ st.markdown("""
 
 # subtitle
 st.markdown(f"""
-<div style="text-align: center; font-size: 28px; margin: 20px 0; color: {text_color};">
+<div style="text-align: center; font-size: 28px; margin: 20px 0; color: {subtitle_color};">
     <span style="letter-spacing: 15px;"> • • </span>&nbsp;What the sensors monitor?&nbsp;<span style="letter-spacing: 15px;"> • • </span>
 </div>
 """, unsafe_allow_html=True)
