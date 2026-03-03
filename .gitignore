@@ -1,26 +1,30 @@
 # =====================
+# Secrets / environment
+# =====================
+.env
+.env.*
+backend/env
+
+# =====================
+# Virtual environments
+# =====================
+venv/
+.venv/
+.env_venv/
+
+# =====================
 # Python cache / build
 # =====================
 __pycache__/
 *.py[cod]
 
 # =====================
-# Virtual environments
+# Databases & App Caches
 # =====================
-frontend/.venv/
-venv/
-.env_venv/
-
-# =====================
-# Streamlit
-# =====================
+*.sqlite
+backend/.cache.sqlite
+.cache/
 .streamlit/
-
-# =====================
-# OS / system files
-# =====================
-.DS_Store
-Thumbs.db
 
 # =====================
 # IDE / editor files
@@ -29,17 +33,23 @@ Thumbs.db
 .vscode/
 
 # =====================
+# OS / system files
+# =====================
+.DS_Store
+Thumbs.db
+
+
+
+# =====================
 # Temp / backup files
 # =====================
 *.save
 gitignore.save
 
-# =====================
-# Secrets / environment
-# =====================
-.env
-.env.*
 
-# local caches
-backend/.cache.sqlite
-*.sqlite
+
+
+
+
+
+

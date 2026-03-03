@@ -1,6 +1,0 @@
-.env
-.venv/
-venv/
-__pycache__/
-backend/.cache.sqlite
-*.sqliteapp/_old/
