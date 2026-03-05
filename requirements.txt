@@ -3,6 +3,13 @@ flask
 streamlit
 streamlit-autorefresh
 
+#----- backend
+requests
+python-dotenv
+flask
+streamlit
+pymongo
+
 # --- Database & Security ---
 pymongo
 dnspython
