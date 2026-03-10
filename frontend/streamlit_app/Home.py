@@ -9,6 +9,7 @@ import matplotlib.colors as plt
 from utils.styles import load_css
 load_css()
 
+load_dotenv()
 # bblue : 131b59
 # yellow: edaf10
 # brown: 57360b
