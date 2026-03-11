@@ -1,7 +1,0 @@
-flask
-pymongo
-python-dotenv
-requests
-openmeteo-requests
-requests-cache
-retry-requests
