@@ -32,16 +32,19 @@ from utils.layout import (
     render_section_header,
     HANGING_ICON,
     dashboard_title_metric_section,
+    render_zone1_top_controls,
+
 )
 
 # ---- page config ----
 st.set_page_config(page_title="Zones", layout="wide")
 load_css()
 
-
 render_zone_header("zone 1")#renders title
 render_refresh_update() #render btn refresh
 render_api_update() #render api for testing
+section, unit = render_zone1_top_controls()
+
 
 
 
@@ -57,6 +60,7 @@ temperature_cel, humidity, description, debug = fetch_weather_data()
 # Start with API values
 temp = temperature_cel
 weather = description
+render_metrics_row(temp, humidity, weather)
 
 # Override ONLY when mongo doc exists AND has values
 if mongo_latest:
@@ -72,16 +76,12 @@ if mongo_latest:
         weather = mongo_weather
 
 
-# These do NOT exist in OpenWeather docs yet (keep None until sensors are ingested)
-light = None
-soil = None
-
-
 
 hist_df = load_history(zone="zone1", area="upper_plants", source="openweather")
 
 
 
+render_section_header("Upper Plants", HANGING_ICON)
 
 # ---- Metrics row ----
 k1, k2, k3, k4 = st.columns(4)
@@ -118,20 +118,30 @@ with c1:
         fig.add_trace(go.Scatter(
             x=hist_df["ts"],
             y=hist_df["temp_c"],
-            mode="lines+markers",        # straight line + dots
-            line=dict(shape="linear"),   # explicitly linear
-            name="Temperature"
+            mode="lines+markers",
+            name="Temperature",
+            line=dict(width=3),
+            marker=dict(size=8)
         ))
+
+        y_min = hist_df["temp_c"].min() - 0.01
+        y_max = hist_df["temp_c"].max() + 0.01
 
         fig.update_layout(
             template="plotly_dark",
-            title="Temperature (°C)",
+            title="Temperature Trend",
             xaxis_title="Time",
             yaxis_title="°C",
-            hovermode="x unified"
+            hovermode="x unified",
+            yaxis=dict(range=[y_min, y_max]),
+            showlegend=False
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={"displayModeBar": False}
+        )
 
     else:
         st.info("No temperature history yet (from openweather).")
@@ -155,28 +165,101 @@ with c2:
 c3, c4 = st.columns(2)
 
 with c3:
-    # soil gauge is ONLY when sensors exist
-    st.info("Soil gauge will show once sensors are ingested (source='sensors').")
+    soil_value = 5.5  # replace later with real sensor value
 
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=soil_value,
+        title={"text": "Soil Moisture (%)"},
+        gauge={
+            "axis": {"range": [0, 100]},
+            "bar": {"thickness": 0.3},
+            "steps": [
+                {"range": [0, 25], "color": "#5c1f1f"},
+                {"range": [25, 45], "color": "#2e6b3e"},
+                {"range": [45, 70], "color": "#7a5a1d"},
+                {"range": [70, 100], "color": "#1f3c5c"},
+            ],
+            "threshold": {
+                "line": {"width": 4},
+                "thickness": 0.8,
+                "value": soil_value
+            }
+        }
+    ))
+
+    fig.update_layout(
+        template="plotly_dark",
+        height=320,
+        margin=dict(l=20, r=20, t=60, b=20)
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 with c4:
-    st.markdown("""
-    <div style="
-        background-color:none;
-        padding:30px;
-        border-radius:12px;
-        text-align:center;
-        border:1px ;
-    ">
-        <h3 style="margin-bottom:10px;">Light (lx)</h3>
-        <p style="color:#9CA3AF; font-size:14px;">
-            Dashboard coming soon.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    if (
+        not hist_df.empty
+        and "temp_c" in hist_df.columns
+        and "humidity_pct" in hist_df.columns
+    ):
 
+        fig = go.Figure()
 
+        # Temperature line
+        fig.add_trace(go.Scatter(
+            x=hist_df["ts"],
+            y=hist_df["temp_c"],
+            mode="lines+markers",
+            name="Temperature (°C)",
+            line=dict(width=3, color="#4f6cff"),
+            marker=dict(size=6),
+            yaxis="y1"
+        ))
 
+        # Humidity line
+        fig.add_trace(go.Scatter(
+            x=hist_df["ts"],
+            y=hist_df["humidity_pct"],
+            mode="lines+markers",
+            name="Humidity (%)",
+            line=dict(width=3, color="#00c896", dash="dash"),
+            marker=dict(size=6),
+            yaxis="y2"
+        ))
 
+        fig.update_layout(
+            template="plotly_dark",
+            title="Temperature vs Humidity",
+            xaxis=dict(title="Time"),
+
+            # Left axis
+            yaxis=dict(
+                title="Temperature (°C)",
+                side="left"
+            ),
+
+            # Right axis
+            yaxis2=dict(
+                title="Humidity (%)",
+                overlaying="y",
+                side="right"
+            ),
+
+            hovermode="x unified",
+            legend=dict(
+                orientation="h",
+                y=1.1,
+                x=0
+            )
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={"displayModeBar": False}
+        )
+
+    else:
+        st.info("No comparison data available yet.")
 st.subheader("Adjust the data")
 
 show_latest_only = st.toggle("Default: shows latest data only", value=True)
