@@ -109,6 +109,11 @@ SOIL_MOISTURE_ICON = get_icon("soil.png")
 HANGING_POT_ICON = get_icon("hanging-pot.png")
 GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 
+
+# ----------------------------
+# Hide page from sidebar (your CSS)
+# ----------------------------
+
 # Hide page from sidebar
 st.markdown(f"""
     <style>
