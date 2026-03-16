@@ -87,11 +87,21 @@ st.set_page_config(page_title="Greenhouse Home", layout="wide", initial_sidebar_
 st.markdown(f"""
 
 <style>
+:root {{
+    --background-color: {background_color};
+    --title-color: {title_color};
+    --boxes-color: {boxes_color};
+    --top-bar-color: {top_bar_color};
+    --text-color: {text_color};
+    --subtitle-color: {subtitle_color};
+    --sidebar-color: {sidebar_color};
+}}
+
 .block-container {{ max-width: 1100px; padding-top: 2rem; }}
 
 /*sets background color*/
 .stApp {{
-    background-color: {background_color};
+    background-color: var(--background-color);
 }}
 
 
@@ -99,7 +109,7 @@ st.markdown(f"""
 .ksuTitle {{
 padding: 26px, 26px, 20px 286px;
 border-radius: 18px;
-background: {title_color};
+background: var(--title-color);
 box-shadow: 0, 10px 30px, rgba(0,0,0,0.35);
 margin-bottom: 10px;
 text-align: center;
@@ -107,14 +117,14 @@ text-align: center;
 
 
 .ksuTitle h1{{
-margin: 0; font-size: 40px; line-height: 1.05; color: {text_color};
+margin: 0; font-size: 40px; line-height: 1.05; color: var(--text-color);
 }}
 
 /*box description */
 .box{{
 padding: 18;
 border-radius: 16px;
-background: {boxes_color};
+background: var(--boxes-color);
 border: 1px solid rgba(255,255,255,0.08);
 text-align: center;
 }}
@@ -156,7 +166,7 @@ hr {{ opacity: 0.15; }}
 
 /* Top bar */
 [data-testid="stHeader"] {{
-    background-color: {top_bar_color};
+    background-color: var(--top-bar-color);
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -193,7 +203,7 @@ st.markdown("""
 
 # subtitle
 st.markdown(f"""
-<div style="text-align: center; font-size: 28px; margin: 20px 0; color: {subtitle_color};">
+<div style="text-align: center; font-size: 28px; margin: 20px 0; color: var(--subtitle-color);">
     <span style="letter-spacing: 15px;"> • • </span>&nbsp;What the sensors monitor?&nbsp;<span style="letter-spacing: 15px;"> • • </span>
 </div>
 """, unsafe_allow_html=True)
@@ -278,7 +288,7 @@ st.markdown(f"""
     }}
     /* Change sidebar background color */
     .stSidebar {{
-        background-color: {sidebar_color};
+        background-color: var(--sidebar-color);
     }}
     </style>
     """,

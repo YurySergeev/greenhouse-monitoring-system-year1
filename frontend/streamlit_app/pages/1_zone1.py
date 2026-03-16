@@ -111,11 +111,15 @@ GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 
 # Hide page from sidebar
 st.markdown(f"""
-# ----------------------------
-# Hide page from sidebar (your CSS)
-# ----------------------------
-
     <style>
+    :root {{
+        --background-color: {background_color};
+        --top-bar-color: {top_bar_color};
+        --sidebar-color: {sidebar_color};
+    }}
+    /* ----------------------------
+     Hide page from sidebar (your CSS)
+     ---------------------------- */
     /* Hide only the second page (zone1) */
     [data-testid="stSidebarNav"] ul li:nth-child(2) {{
         display: none;
@@ -123,15 +127,15 @@ st.markdown(f"""
     
     /* Apply theme colors */
     .stApp {{
-        background-color: {background_color};
+        background-color: var(--background-color);
     }}
     
     [data-testid="stHeader"] {{
-        background-color: {top_bar_color};
+        background-color: var(--top-bar-color);
     }}
     
     .stSidebar {{
-        background-color: {sidebar_color};
+        background-color: var(--sidebar-color);
     }}
     </style>
     """,
@@ -421,24 +425,24 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if temp is not None:
-        metric_box_style("Temperature", f"{float(temp):.1f}°C", "#131b59", TEMP_ICON)
+        metric_box_style("Temperature", f"{float(temp):.1f}°C", sidebar_color, TEMP_ICON)
     else:
-        metric_box_style("Temperature", "N/A", "#131b59", TEMP_ICON)
+        metric_box_style("Temperature", "N/A", sidebar_color, TEMP_ICON)
 
 with col2:
     if humidity is not None:
-        metric_box_style("Humidity", f"{humidity}%", "#edaf10", HUMIDITY_ICON)
+        metric_box_style("Humidity", f"{humidity}%", sidebar_color, HUMIDITY_ICON)
     else:
-        metric_box_style("Humidity", "N/A", "#edaf10", HUMIDITY_ICON)
+        metric_box_style("Humidity", "N/A", sidebar_color, HUMIDITY_ICON)
 
 with col3:
     if weather is not None:
-        metric_box_style("Weather 🌤️", str(weather).capitalize(), "#57360b")
+        metric_box_style("Weather 🌤️", str(weather).capitalize(), sidebar_color)
     else:
-        metric_box_style("Weather 🌤️", "N/A", "#57360b")
+        metric_box_style("Weather 🌤️", "N/A", sidebar_color)
 
 with col4:
-    metric_box_style("Soil Moisture", "5.5%", "#2e6b3e", SOIL_MOISTURE_ICON)
+    metric_box_style("Soil Moisture", "5.5%", sidebar_color, SOIL_MOISTURE_ICON)
 
 
 ####### SECTION HEASDER FOR HANGING PLANTS #############
