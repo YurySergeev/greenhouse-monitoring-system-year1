@@ -142,6 +142,15 @@ st.markdown(f"""
     .stSidebar {{
         background-color: var(--sidebar-color);
     }}
+    .stRadio label {{
+        color: var(--text-color) !important;
+    }}
+    .stRadio span {{
+        color: var(--text-color) !important;
+    }}
+    .stRadio div {{
+        color: var(--text-color) !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True
@@ -188,16 +197,21 @@ def sidebar_control_func():
         col_controls, col_alerts = st.columns(2) #columns
 
         with col_controls:
-            with st.container(border=True):
-                st.markdown("#### ⚙️ Controls")
-                unit = st.radio("Temperature Unit", ["°C", "°F"], horizontal=True, label_visibility="collapsed",
-                                key="temp_unit")
+            st.markdown(f"""
+            <div style="background-color: {sidebar_color}; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12);">
+            <h4 style="color: {text_color};">⚙️ Controls</h4>
+            """, unsafe_allow_html=True)
+            unit = st.radio("Temperature Unit", ["°C", "°F"], horizontal=True, label_visibility="collapsed",
+                            key="temp_unit")
+            st.markdown("</div>", unsafe_allow_html=True)
 
         with col_alerts:
-            with st.container(border=True):
-                st.markdown("#### 🚨 Upper Section Alerts")
-                st.write("Coming soon…")
-                st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style="background-color: {sidebar_color}; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12);">
+            <h4 style="color: {text_color};">🚨 Upper Section Alerts</h4>
+            <p style="color: {text_color};">Coming soon…</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 
         return section, unit
@@ -213,9 +227,9 @@ def sidebar_control_func():
 def main():
     section, unit = sidebar_control_func()
 
-    st.title("Zone 1 Dashboard")
-    st.write(f"Selected: **{section}**")
-    st.write(f"Unit: {unit}")
+    st.markdown(f"<h1 style='color: {text_color};'>Zone 1 Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: {text_color};'>Selected: <strong>{section}</strong></p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: {text_color};'>Unit: {unit}</p>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
@@ -234,12 +248,12 @@ if st.sidebar.button("🌿 Change Theme", key="theme_button", help="Cycle throug
     st.rerun()
 
 # Last updated timestamp (only once)
-st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+st.markdown(f"<small style='color: {text_color};'>Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</small>", unsafe_allow_html=True)
 
 # Debug: confirm env loaded
-st.write("API Key", bool(API_KEY))
-st.write("API key length:", len(API_KEY) if API_KEY else None)
-st.write("API key preview:", (API_KEY[:4] + "..." + API_KEY[-4:]) if API_KEY else None)
+st.markdown(f"<p style='color: {text_color};'>API Key {bool(API_KEY)}</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='color: {text_color};'>API key length: {len(API_KEY) if API_KEY else None}</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='color: {text_color};'>API key preview: {(API_KEY[:4] + '...' + API_KEY[-4:]) if API_KEY else None}</p>", unsafe_allow_html=True)
 
 # ----------------------------
 # Weather: OpenWeather (cached to avoid 429)
@@ -399,7 +413,7 @@ def metric_box_style(title, value, color, icon=None):
         padding: 18px;
         border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.12);
-        color: white;
+        color: {text_color};
     ">
       <div style="
           font-size: 30px;
