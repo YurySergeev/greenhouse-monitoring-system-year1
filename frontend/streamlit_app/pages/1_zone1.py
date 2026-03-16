@@ -114,9 +114,6 @@ GROUND_PLANTS_ICON = get_icon("ground_plants.png")
 # Hide page from sidebar (your CSS)
 # ----------------------------
 
-
-st.markdown(
-    """
     <style>
     /* Hide only the second page (zone1) */
     [data-testid="stSidebarNav"] ul li:nth-child(2) {{
