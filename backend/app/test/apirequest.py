@@ -4,6 +4,22 @@ import json
 import pymongo
 import schedule
 import time
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "greenhouse_db")
+
+try:
+    client = pymongo.MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    collection = db["weather_data"]
+    print("Successfully connected to MongoDB.")
+except Exception as e:
+    print(f"Database connection failed: {e}")
+
 
 
 #fetch api from openweather API
@@ -58,25 +74,43 @@ def transform_data(api_data):
 #save data to mongo
 def save_data(records):
     #connections
+    
+    if records:
+        collection.insert_one(records)
+        print(f"Data saved at {datetime.now()}")
+    """
     MONGO_URI="mongodb+srv://rcoulson_db_user:7q6kDfRuldzW2COa@greenhouse-clouster.n6uuf84.mongodb.net/greenhouse_db?retryWrites=true&w=majority&appName=greenhouse-clouster"
     client = pymongo.MongoClient(MONGO_URI)
     db = client["greenhouse-clouster"]
     collection = db["weather_data"]
     collection.insert_one(records)
     print("data saved")
+    
+    """
+    
+    
+    
 
 def collect_data_to_db():
+    
+    api_data = get_weather()
+    if api_data: # Prevent crashes if the API returns None
+        final_data = transform_data(api_data)
+        save_data(final_data)
+        
+    """
     api_data = get_weather()
     final_data = transform_data(api_data)
     save_data(final_data)
-
-
-
-
+    """
+    
+    
 # every 20 minutes, collect weather data,
 # run through get_weather, transform_data, and save_data,
 # then save to MongoDB forever until script is stopped
-schedule.every(20).minutes.do(collect_data_to_db)
+collect_data_to_db()
+
+schedule.every(.1).minutes.do(collect_data_to_db)
 
 while True:
     schedule.run_pending()

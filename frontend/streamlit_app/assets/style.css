@@ -1,71 +1,207 @@
-/* Hide second sidebar item */
+/* ── Hide auto-generated second sidebar nav item ── */
 [data-testid="stSidebarNav"] ul li:nth-child(2) {
     display: none;
 }
 
-/* Bigger RADIO label ("Temperature Unit") */
+/* ── Page background ── */
+.stApp {
+    background-color: var(--background-color);
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background-color: var(--secondary-background-color) !important;
+    border-right: 1px solid rgba(128, 128, 128, 0.15) !important;
+}
+
+/* ── Section label (small caps above groups) ── */
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.45;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 10px;
+    margin-top: 28px;
+}
+
+/* ── Page header ── */
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.page-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-color);
+    opacity: 0.55;
+    margin: 3px 0 0 0;
+}
+
+/* ── Live badge — green works in both modes ── */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #065F46;
+    background: #D1FAE5;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.live-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+}
+
+/* ── Metric cards ── */
+.metric-card {
+    background: var(--secondary-background-color);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    border-radius: 12px;
+    padding: 16px 18px 14px;
+    transition: border-color 0.15s ease;
+}
+
+.metric-card:hover {
+    border-color: rgba(128, 128, 128, 0.4);
+}
+
+/* ── Icon chips — rgba so transparent in both modes ── */
+.metric-icon-chip {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+.chip-green { background: rgba(16, 185, 129, 0.15); }
+.chip-blue  { background: rgba(59, 130, 246, 0.15);  }
+.chip-amber { background: rgba(245, 158, 11, 0.15);  }
+.chip-gray  { background: rgba(128, 128, 128, 0.12); }
+
+/* ── Metric text ── */
+.metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.1;
+}
+
+.metric-unit {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-color);
+    opacity: 0.5;
+    margin-left: 2px;
+}
+
+.metric-trend {
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.45;
+    margin-top: 5px;
+}
+
+/* Override opacity for colored trends */
+.trend-up   { color: #059669 !important; opacity: 1 !important; }
+.trend-warn { color: #DC2626 !important; opacity: 1 !important; }
+
+/* ── Buttons ── */
+.stButton > button {
+    background: var(--secondary-background-color) !important;
+    border: 1px solid rgba(128, 128, 128, 0.25) !important;
+    color: var(--text-color) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+.stButton > button:hover {
+    border-color: rgba(128, 128, 128, 0.5) !important;
+}
+
+/* ── Radio ── */
 div[data-testid="stRadio"] label p {
-  font-size: 24px !important;
-  font-weight: 700 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-color) !important;
 }
 
-/* Bigger RADIO options (°C, °F) */
-div[data-testid="stRadio"] div[role="radiogroup"] label span,
-div[data-testid="stRadio"] div[role="radiogroup"] label p {
-  font-size: 28px !important;
-  font-weight: 700 !important;
-}
-
-/* More spacing between options */
 div[data-testid="stRadio"] div[role="radiogroup"] {
-  gap: 24px !important;
+    gap: 10px !important;
 }
 
-/* Improve bordered containers */
-div[data-testid="stVerticalBlock"] > div:has(> h4) {
-    background: rgba(255,255,255,0.02);
-    border-radius: 16px;
-    padding: 20px;
+/* ── Divider ── */
+hr {
+    border: none !important;
+    border-top: 1px solid rgba(128, 128, 128, 0.2) !important;
+    margin: 16px 0 !important;
 }
 
-
-.metric-card{
-  padding: 18px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: white;
+/* ── Section header ── */
+.section-title-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 32px 0 6px 0;
 }
 
-.metric-header{
-  font-size: 30px;
-  font-weight: 700;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.section-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
 }
 
-.metric-icon{
-  width: 40px;
-  height: 40px;
+.section-divider {
+    width: 32px;
+    height: 3px;
+    background: #10B981;
+    border-radius: 2px;
+    margin: 0 0 20px 0;
 }
 
-.metric-value{
-  font-size: 32px;
-  font-weight: 800;
+/* ── Bordered containers (controls / alerts) ── */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid rgba(128, 128, 128, 0.2) !important;
+    border-radius: 12px !important;
+    background: var(--secondary-background-color) !important;
 }
 
-
-/* metrics label style ----------------------- */
-div[data-testid="stMetric"] label {
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.5px !important;
-  color: #9CA3AF !important;
-  text-transform: uppercase !important;
-}
-
-div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-  font-size: 38px !important;
-  font-weight: 800 !important;
+/* ── Caption ── */
+.stCaption {
+    font-size: 11px !important;
+    color: var(--text-color) !important;
+    opacity: 0.45 !important;
 }
