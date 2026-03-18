@@ -73,7 +73,7 @@ def collect_data_to_db():
 
 
 
-# every 5 minutes, collect weather data,
+# every 20 minutes, collect weather data,
 # run through get_weather, transform_data, and save_data,
 # then save to MongoDB forever until script is stopped
 schedule.every(20).minutes.do(collect_data_to_db)
