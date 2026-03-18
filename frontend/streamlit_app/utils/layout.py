@@ -1,14 +1,11 @@
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
-import streamlit as st
-from dotenv import load_dotenv
 import base64
 
+import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 
 
 # --------------------------------------------------
@@ -28,7 +25,6 @@ def load_icon_b64(filename: str) -> str:
 # --------------------------------------------------
 
 def render_zone_header(zone_name: str):
-    """Renders the top page title with a live badge."""
     st.markdown(f"""
     <div class="page-header">
         <div>
@@ -44,7 +40,7 @@ def render_zone_header(zone_name: str):
 
 
 # --------------------------------------------------
-# Last updated / refresh
+# Refresh bar
 # --------------------------------------------------
 
 def render_refresh_update():
@@ -69,7 +65,6 @@ def render_zone1_top_controls():
     if "temp_unit" not in st.session_state:
         st.session_state["temp_unit"] = "°C"
 
-    # Sub-section buttons
     col1, col2, col3, col_spacer = st.columns([1, 1, 1, 3])
     with col1:
         if st.button("Upper Plants", use_container_width=True):
@@ -109,11 +104,9 @@ def render_zone1_top_controls():
 # Individual metric card
 # --------------------------------------------------
 
-def render_metric_card(title: str, value: str, chip_class: str, icon: str, trend: str = "", trend_class: str = ""):
-    trend_html = ""
-    if trend:
-        trend_html = f'<div class="metric-trend {trend_class}">{trend}</div>'
-
+def render_metric_card(title: str, value: str, chip_class: str, icon: str,
+                       trend: str = "", trend_class: str = ""):
+    trend_html = f'<div class="metric-trend {trend_class}">{trend}</div>' if trend else ""
     html = f"""
     <div class="metric-card">
         <div class="metric-icon-chip {chip_class}">{icon}</div>
@@ -130,11 +123,12 @@ def render_metric_card(title: str, value: str, chip_class: str, icon: str, trend
 # --------------------------------------------------
 
 def render_metrics_row(temp, humidity, weather, temp_unit="°C"):
-    # Convert if needed
     if temp is not None:
-        temp_f = round(temp * 9 / 5 + 32, 1)
-        display_temp = f"{float(temp):.1f}<span class='metric-unit'>°C</span>" if temp_unit == "°C" \
-                       else f"{temp_f}<span class='metric-unit'>°F</span>"
+        display_temp = (
+            f"{float(temp):.1f}<span class='metric-unit'>°C</span>"
+            if temp_unit == "°C"
+            else f"{round(temp * 9/5 + 32, 1)}<span class='metric-unit'>°F</span>"
+        )
     else:
         display_temp = "N/A"
 
@@ -144,54 +138,28 @@ def render_metrics_row(temp, humidity, weather, temp_unit="°C"):
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        render_metric_card(
-            title="Temperature",
-            value=display_temp,
-            chip_class="chip-green",
-            icon="🌡️",
-            trend="↑ 0.3° from 1h ago",
-            trend_class="trend-up",
-        )
-
+        render_metric_card("Temperature", display_temp, "chip-green", "🌡️",
+                           "↑ 0.3° from 1h ago", "trend-up")
     with col2:
-        render_metric_card(
-            title="Humidity",
-            value=display_humidity,
-            chip_class="chip-blue",
-            icon="💧",
-            trend="— stable",
-        )
-
+        render_metric_card("Humidity", display_humidity, "chip-blue", "💧",
+                           "— stable")
     with col3:
-        render_metric_card(
-            title="Soil Moisture",
-            value="5.5<span class='metric-unit'>%</span>",
-            chip_class="chip-amber",
-            icon="🪴",
-            trend="↓ low — check soon",
-            trend_class="trend-warn",
-        )
-
+        render_metric_card("Soil Moisture", "5.5<span class='metric-unit'>%</span>",
+                           "chip-amber", "🪴", "↓ low — check soon", "trend-warn")
     with col4:
-        render_metric_card(
-            title="Weather",
-            value=f'<span style="font-size:18px;font-weight:500;color:#374151;">{display_weather}</span>',
-            chip_class="chip-gray",
-            icon="🌤️",
-            trend="Akron, OH",
-        )
+        render_metric_card("Weather",
+                           f'<span style="font-size:18px;font-weight:500;">{display_weather}</span>',
+                           "chip-gray", "🌤️", "Akron, OH")
 
-    # breathing room below cards
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 
 # --------------------------------------------------
-# Section header (title + green underline)
+# Section header
 # --------------------------------------------------
 
 def render_section_header(title: str, icon: str | None = None):
     icon_html = f'<span style="font-size:18px;">{icon}</span>' if icon else ""
-
     html = f"""
     <div>
         <div class="section-title-container">
@@ -205,30 +173,25 @@ def render_section_header(title: str, icon: str | None = None):
 
 
 # --------------------------------------------------
-# 24-hour trend chart (Plotly)
+# 24-hour trend chart (Plotly — auto dark mode)
 # --------------------------------------------------
 
 def render_trend_chart(df: pd.DataFrame):
-    """Renders a clean temperature & humidity line chart from a history dataframe."""
     if df is None or df.empty:
         st.info("No history data available yet.")
         return
 
     fig = go.Figure()
 
-    # Temperature line
     fig.add_trace(go.Scatter(
-        x=df["ts"],
-        y=df["temp_c"],
+        x=df["ts"], y=df["temp_c"],
         name="Temperature (°C)",
         line=dict(color="#10B981", width=2),
         hovertemplate="%{y:.1f}°C<extra></extra>",
     ))
 
-    # Humidity line
     fig.add_trace(go.Scatter(
-        x=df["ts"],
-        y=df["humidity_pct"],
+        x=df["ts"], y=df["humidity_pct"],
         name="Humidity (%)",
         line=dict(color="#3B82F6", width=2, dash="dot"),
         yaxis="y2",
@@ -240,36 +203,15 @@ def render_trend_chart(df: pd.DataFrame):
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", size=11, color="#6B7280"),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0,
-            font=dict(size=11),
-        ),
-        xaxis=dict(
-            showgrid=False,
-            zeroline=False,
-            tickformat="%H:%M",
-            tickfont=dict(size=10),
-        ),
-        yaxis=dict(
-            showgrid=True,
-            gridcolor="#F3F4F6",
-            zeroline=False,
-            title="°C",
-            titlefont=dict(size=10),
-        ),
-        yaxis2=dict(
-            overlaying="y",
-            side="right",
-            showgrid=False,
-            zeroline=False,
-            title="%",
-            titlefont=dict(size=10),
-        ),
+        font=dict(size=11),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+                    font=dict(size=11)),
+        xaxis=dict(showgrid=False, zeroline=False, tickformat="%H:%M",
+                   tickfont=dict(size=10)),
+        yaxis=dict(showgrid=True, gridcolor="rgba(128,128,128,0.15)", zeroline=False,
+                   title="°C", titlefont=dict(size=10)),
+        yaxis2=dict(overlaying="y", side="right", showgrid=False, zeroline=False,
+                    title="%", titlefont=dict(size=10)),
         hovermode="x unified",
     )
 
@@ -277,42 +219,40 @@ def render_trend_chart(df: pd.DataFrame):
 
 
 # --------------------------------------------------
-# Zone health panel (progress bars)
+# Zone health panel
 # --------------------------------------------------
 
 def render_zone_health(temp, humidity):
-    """Simple health summary with inline progress bars."""
-
-    def _health_row(label: str, pct: int, status: str, color: str):
-        bar_color = {"good": "#10B981", "warn": "#F59E0B", "bad": "#EF4444"}.get(color, "#10B981")
-        status_color = {"good": "#065F46", "warn": "#92400E", "bad": "#991B1B"}.get(color, "#065F46")
-        status_bg   = {"good": "#D1FAE5", "warn": "#FEF3C7", "bad": "#FEE2E2"}.get(color, "#D1FAE5")
-
+    def _row(label, pct, status, color):
+        colors = {
+            "good": ("#10B981", "rgba(16,185,129,0.15)", "#059669"),
+            "warn": ("#F59E0B", "rgba(245,158,11,0.15)",  "#92400E"),
+            "bad":  ("#EF4444", "rgba(239,68,68,0.15)",   "#991B1B"),
+        }
+        bar, bg, text = colors.get(color, colors["good"])
         return f"""
         <div style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                <span style="font-size:12px;color:#374151;">{label}</span>
-                <span style="font-size:11px;font-weight:600;color:{status_color};background:{status_bg};
-                             padding:2px 8px;border-radius:20px;">{status}</span>
+                <span style="font-size:12px;color:var(--text-color);opacity:0.8;">{label}</span>
+                <span style="font-size:11px;font-weight:600;color:{text};
+                             background:{bg};padding:2px 8px;border-radius:20px;">{status}</span>
             </div>
-            <div style="height:4px;background:#F3F4F6;border-radius:2px;">
-                <div style="height:4px;width:{pct}%;background:{bar_color};border-radius:2px;"></div>
+            <div style="height:4px;background:rgba(128,128,128,0.15);border-radius:2px;">
+                <div style="height:4px;width:{pct}%;background:{bar};border-radius:2px;"></div>
             </div>
         </div>
         """
 
-    temp_pct  = min(int((temp / 35) * 100), 100) if temp is not None else 0
-    hum_pct   = int(humidity) if humidity is not None else 0
+    temp_pct   = min(int((temp / 35) * 100), 100) if temp is not None else 0
+    hum_pct    = int(humidity) if humidity is not None else 0
+    temp_color = "good" if 18 <= (temp or 0) <= 28 else "warn"
+    hum_color  = "good" if 50 <= (humidity or 0) <= 80 else "warn"
 
-    temp_color  = "good" if 18 <= (temp or 0) <= 28 else "warn"
-    hum_color   = "good" if 50 <= (humidity or 0) <= 80 else "warn"
-
-    html = f"""
+    st.markdown(f"""
     <div style="padding:4px 0;">
-        {_health_row("Temperature", temp_pct,  "Good" if temp_color == "good" else "High", temp_color)}
-        {_health_row("Humidity",    hum_pct,   "Good" if hum_color  == "good" else "Low",  hum_color)}
-        {_health_row("Soil moisture", 20,      "Low", "bad")}
-        {_health_row("Sensor uptime", 99,      "99.2%", "good")}
+        {_row("Temperature",  temp_pct, "Good" if temp_color == "good" else "High", temp_color)}
+        {_row("Humidity",     hum_pct,  "Good" if hum_color  == "good" else "Low",  hum_color)}
+        {_row("Soil moisture", 20,      "Low",   "bad")}
+        {_row("Sensor uptime", 99,      "99.2%", "good")}
     </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
