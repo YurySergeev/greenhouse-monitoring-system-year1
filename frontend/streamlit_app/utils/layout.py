@@ -72,6 +72,50 @@ def render_zone_header(zone_name: str):
     st.title(f"🌱 {zone_name}")
     st.sidebar.caption(f"{zone_name} navigation")
 
+def render_zone1_top_controls():
+        if "zone1_section" not in st.session_state:
+            st.session_state["zone1_section"] = "Upper Plants"
+
+        if "temp_unit" not in st.session_state:
+            st.session_state["temp_unit"] = "°C"
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            if st.button("Upper Plants", use_container_width=True):
+                st.session_state["zone1_section"] = "Upper Plants"
+
+        with col2:
+            if st.button("Middle Plants", use_container_width=True):
+                st.session_state["zone1_section"] = "Middle Plants"
+
+        with col3:
+            if st.button("Ground Plants", use_container_width=True):
+                st.session_state["zone1_section"] = "Ground Plants"
+
+        st.divider()
+
+        col_controls, col_alerts = st.columns(2)
+
+        with col_controls:
+            with st.container(border=True):
+                st.markdown("#### ⚙️ Controls")
+                unit = st.radio(
+                    "Temperature Unit",
+                    ["°C", "°F"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="temp_unit"
+                )
+
+        with col_alerts:
+            with st.container(border=True):
+                st.markdown("#### 🚨 Upper Section Alerts")
+                st.write("Coming soon…")
+
+        section = st.session_state["zone1_section"]
+        return section, unit
+
 
 def render_metric_box(title, value, color, icon=None):
     icon_html = ""
@@ -146,7 +190,6 @@ def render_metrics_row(temp, humidity, weather):
             "#2e6b3e",
             SOIL_MOISTURE_ICON
         )
-
 
 def render_section_header(title: str, icon: str | None = None):
     icon_html = ""
