@@ -45,11 +45,6 @@ render_refresh_update() #render btn refresh
 render_api_update() #render api for testing
 section, unit = render_zone1_top_controls()
 
-
-
-
-
-
 # ----------------------------
 # Choose data source:
 # Mongo first if it has values, otherwise API fallback
@@ -60,7 +55,7 @@ temperature_cel, humidity, description, debug = fetch_weather_data()
 # Start with API values
 temp = temperature_cel
 weather = description
-render_metrics_row(temp, humidity, weather)
+render_metrics_row(temp, humidity, weather) #metric box boxes
 
 # Override ONLY when mongo doc exists AND has values
 if mongo_latest:
@@ -78,10 +73,7 @@ if mongo_latest:
 
 
 hist_df = load_history(zone="zone1", area="upper_plants", source="openweather")
-
-
-
-render_section_header("Upper Plants", HANGING_ICON)
+render_section_header("Upper Plants", HANGING_ICON) #render title section
 
 # ---- Metrics row ----
 k1, k2, k3, k4 = st.columns(4)
