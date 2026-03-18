@@ -1,47 +1,111 @@
 import streamlit as st
 from pathlib import Path
 
-st.set_page_config(page_title="Greenhouse Home", layout="wide")
+st.set_page_config(page_title="Greenhouse — Kent State", layout="wide", page_icon="🌱")
 
-# Paths
-BASE_DIR = Path(__file__).resolve().parent
+# ── Paths ──────────────────────────────────────────────────────────────────────
+BASE_DIR   = Path(__file__).resolve().parent
 ASSETS_DIR = BASE_DIR / "assets"
+LOGO_PATH  = ASSETS_DIR / "logo3.png"
+IMG_PATH   = ASSETS_DIR / "greenhouse2.jpg"
 
-LOGO_PATH = ASSETS_DIR / "logo3.png"
-IMG_GREENHOUSE = ASSETS_DIR / "greenhouse2.jpg"
+# ── Load CSS ───────────────────────────────────────────────────────────────────
+css_path = BASE_DIR / "assets" / "style.css"
+if css_path.exists():
+    st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
-# Sidebar
-st.sidebar.image(str(LOGO_PATH), width=120)
-st.sidebar.title("System Control")
+# ── Sidebar ────────────────────────────────────────────────────────────────────
+with st.sidebar:
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=100)
+    st.markdown("### Greenhouse")
+    st.caption("Kent State University")
+    st.divider()
 
-zone_selection = st.sidebar.selectbox(
-    "Select a zone",
-    ["Select a zone", "Zone 1", "Zone 2"],
-)
+    st.markdown('<p class="section-label">Zones</p>', unsafe_allow_html=True)
+    zone_selection = st.selectbox(
+        "Navigate to zone",
+        ["— select —", "Zone 1", "Zone 2"],
+        label_visibility="collapsed",
+    )
+    if zone_selection == "Zone 1":
+        st.switch_page("pages/1_zone1.py")
 
-if zone_selection == "Zone 1":
-    st.switch_page("pages/1_zone1.py")
+    st.divider()
+    st.caption("System online · All sensors nominal")
 
-# Title
-st.title("Kent State Greenhouse Monitoring")
+# ── Main content ───────────────────────────────────────────────────────────────
+st.markdown("""
+<div style="margin-bottom: 32px;">
+    <p style="font-size:24px;font-weight:600;color:#111827;margin:0;">
+        Kent State Greenhouse
+    </p>
+    <p style="font-size:14px;color:#6B7280;margin:4px 0 0 0;">
+        Environmental monitoring system
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-st.subheader("What the sensors monitor")
+# ── Info cards row ─────────────────────────────────────────────────────────────
+col1, col2, col3 = st.columns(3)
 
-col1, col2 = st.columns(2)
+card_style = """
+    background:#FFFFFF;border:1px solid #EAECF0;border-radius:12px;
+    padding:20px 22px;height:100%;
+"""
 
 with col1:
-    st.markdown("### Environmental Metrics")
-    st.write("• Temperature")
-    st.write("• Humidity")
-    st.write("• Soil Moisture")
-    st.write("• pH")
+    st.markdown(f"""
+    <div style="{card_style}">
+        <div style="font-size:22px;margin-bottom:10px;">🌡️</div>
+        <p style="font-size:13px;font-weight:600;color:#111827;margin:0 0 10px 0;">
+            Environmental sensors
+        </p>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 4px 0;">Temperature</p>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 4px 0;">Humidity</p>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 4px 0;">Soil moisture</p>
+        <p style="font-size:12px;color:#6B7280;margin:0;">pH</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("### System Capabilities")
-    st.write("• Zone dashboards")
-    st.write("• Alerts")
-    st.write("• Raspberry Pi integration")
+    st.markdown(f"""
+    <div style="{card_style}">
+        <div style="font-size:22px;margin-bottom:10px;">📡</div>
+        <p style="font-size:13px;font-weight:600;color:#111827;margin:0 0 10px 0;">
+            System capabilities
+        </p>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 4px 0;">Zone dashboards</p>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 4px 0;">Live alerts</p>
+        <p style="font-size:12px;color:#6B7280;margin:0 0 4px 0;">Historical charts</p>
+        <p style="font-size:12px;color:#6B7280;margin:0;">Raspberry Pi integration</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Image
-if IMG_GREENHOUSE.exists():
-    st.image(str(IMG_GREENHOUSE), use_container_width=True)
+with col3:
+    st.markdown(f"""
+    <div style="{card_style}">
+        <div style="font-size:22px;margin-bottom:10px;">🗂️</div>
+        <p style="font-size:13px;font-weight:600;color:#111827;margin:0 0 10px 0;">
+            Active zones
+        </p>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10B981;"></div>
+            <span style="font-size:12px;color:#374151;">Zone 1 — online</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#D1D5DB;"></div>
+            <span style="font-size:12px;color:#9CA3AF;">Zone 2 — coming soon</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── Greenhouse image ───────────────────────────────────────────────────────────
+st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+
+if IMG_PATH.exists():
+    st.image(
+        str(IMG_PATH),
+        use_container_width=True,
+        caption="Kent State University greenhouse facility",
+    )

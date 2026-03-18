@@ -27,11 +27,8 @@ from utils.db import load_latest_reading, load_history, load_readings
 from utils.layout import (
     render_zone_header,
     render_refresh_update,
-    render_api_update,
     render_metrics_row,
     render_section_header,
-    HANGING_ICON,
-    dashboard_title_metric_section,
     render_zone1_top_controls,
 
 )
@@ -42,7 +39,7 @@ load_css()
 
 render_zone_header("zone 1")#renders title
 render_refresh_update() #render btn refresh
-render_api_update() #render api for testing
+
 section, unit = render_zone1_top_controls()
 
 # ----------------------------
@@ -73,7 +70,7 @@ if mongo_latest:
 
 
 hist_df = load_history(zone="zone1", area="upper_plants", source="openweather")
-render_section_header("Upper Plants", HANGING_ICON) #render title section
+#render_section_header("Upper Plants", HANGING_ICON) #render title section
 
 # ---- Metrics row ----
 k1, k2, k3, k4 = st.columns(4)
@@ -196,24 +193,24 @@ with c4:
 
         fig = go.Figure()
 
-        # Temperature line
+        # Temperature line (Warm Terra Cotta)
         fig.add_trace(go.Scatter(
             x=hist_df["ts"],
             y=hist_df["temp_c"],
             mode="lines+markers",
             name="Temperature (°C)",
-            line=dict(width=3, color="#4f6cff"),
+            line=dict(width=3, color="#E07A5F"), # Updated to Terra Cotta
             marker=dict(size=6),
             yaxis="y1"
         ))
 
-        # Humidity line
+        # Humidity line (Sage Green)
         fig.add_trace(go.Scatter(
             x=hist_df["ts"],
             y=hist_df["humidity_pct"],
             mode="lines+markers",
             name="Humidity (%)",
-            line=dict(width=3, color="#00c896", dash="dash"),
+            line=dict(width=3, color="#81B29A", dash="dash"), # Updated to Sage Green
             marker=dict(size=6),
             yaxis="y2"
         ))
