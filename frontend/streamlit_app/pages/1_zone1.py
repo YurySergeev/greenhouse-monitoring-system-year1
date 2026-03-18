@@ -33,6 +33,9 @@ from utils.layout import (
 
 )
 
+from utils.sidebar import render_sidebar
+render_sidebar()
+
 # ---- page config ----
 st.set_page_config(page_title="Zones", layout="wide")
 load_css()
