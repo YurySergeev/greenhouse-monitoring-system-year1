@@ -25,3 +25,9 @@ def render_sidebar():
 
         st.divider()
         st.caption("System online · All sensors nominal")
+
+        st.markdown('<p class="section-label">System</p>', unsafe_allow_html=True)
+        if st.button("Settings", use_container_width=True):
+            st.switch_page("pages/settings.py")
+
+        st.caption("System online · All sensors nominal")
