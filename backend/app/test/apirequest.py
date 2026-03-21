@@ -12,13 +12,18 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME", "greenhouse_db")
 
-try:
-    client = pymongo.MongoClient(MONGO_URI)
-    db = client[DB_NAME]
-    collection = db["weather_data"]
-    print("Successfully connected to MongoDB.")
-except Exception as e:
-    print(f"Database connection failed: {e}")
+collection = None
+
+def init_db_collection():
+    global collection
+    try:
+        client = pymongo.MongoClient(MONGO_URI)
+        db = client[DB_NAME]
+        collection = db["weather_data"]
+        print("Successfully connected to MongoDB.")
+    except Exception as e:
+        collection = None
+        print(f"Database connection failed: {e}")
 
 
 
@@ -74,8 +79,8 @@ def transform_data(api_data):
 #save data to mongo
 def save_data(records):
     #connections
-    
-    if records:
+
+    if records and collection is not None:
         collection.insert_one(records)
         print(f"Data saved at {datetime.now()}")
     """
@@ -105,16 +110,17 @@ def collect_data_to_db():
     """
     
     
-# every 20 minutes, collect weather data,
-# run through get_weather, transform_data, and save_data,
-# then save to MongoDB forever until script is stopped
-collect_data_to_db()
+def run_scheduler(interval_minutes=0.1):
+    # every n minutes, collect weather data,
+    # run through get_weather, transform_data, and save_data,
+    # then save to MongoDB forever until script is stopped
+    init_db_collection()
+    collect_data_to_db()
+    schedule.every(interval_minutes).minutes.do(collect_data_to_db)
 
-schedule.every(.1).minutes.do(collect_data_to_db)
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 
 
@@ -124,6 +130,10 @@ while True:
  option 2 - deploy to cloud server,
 
  '''
+
+
+if __name__ == "__main__":
+    run_scheduler()
 
 
 
