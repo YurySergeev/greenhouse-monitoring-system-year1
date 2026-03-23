@@ -11,16 +11,20 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME", "greenhouse_db")
 
-try:
-    client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    client.admin.command("ping")
-    db = client[DB_NAME]
-    collection = db["weather_data"]
-    collection.create_index("ts")
-    print("Successfully connected to MongoDB.")
-except Exception as e:
-    print(f"Database connection failed: {e}")
-    raise
+collection = None
+
+def init_db_collection():
+    global collection
+    try:
+        client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        client.admin.command("ping")
+        db = client[DB_NAME]
+        collection = db["weather_data"]
+        collection.create_index("ts")
+        print("Successfully connected to MongoDB.")
+    except Exception as e:
+        collection = None
+        print(f"Database connection failed: {e}")
 
 
 def get_weather():
@@ -74,7 +78,7 @@ def transform_data(api_data):
 
 
 def save_data(records):
-    if records:
+    if records and collection is not None:
         collection.insert_one(records)
         print(f"Data saved at {datetime.now(timezone.utc)}")
 
@@ -86,10 +90,15 @@ def collect_data_to_db():
         save_data(final_data)
 
 
-def run_scheduler():
+def run_scheduler(interval_minutes=20):
+    init_db_collection()
     collect_data_to_db()
-    schedule.every(20).minutes.do(collect_data_to_db)
+    schedule.every(interval_minutes).minutes.do(collect_data_to_db)
 
     while True:
         schedule.run_pending()
         time.sleep(1)
+
+
+if __name__ == "__main__":
+    run_scheduler()
