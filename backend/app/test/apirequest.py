@@ -117,6 +117,13 @@ while True:
     time.sleep(1)
 
 
+<<<<<<< Updated upstream
+=======
+def run_scheduler(interval_minutes=5):
+    init_db_collection()
+    collect_data_to_db()
+    schedule.every(interval_minutes).minutes.do(collect_data_to_db)
+>>>>>>> Stashed changes
 
 '''
  to store data daily automatically 
