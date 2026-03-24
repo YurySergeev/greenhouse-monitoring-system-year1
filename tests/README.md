@@ -2,37 +2,38 @@
 
 ## Overview
 
-This folder contains unit tests for the backend of the Greenhouse Monitoring System.
-The tests follow a Test-Driven Development (TDD) approach to verify the weather data pipeline.
+This folder contains backend unit tests for the Greenhouse Monitoring System.
+The tests verify the weather data pipeline using a Test-Driven Development (TDD) approach.
 
 ## What is Tested
 
-* `get_weather()` – API success and failure cases
-* `transform_data()` – correct data formatting
-* `save_data()` – database insert behavior
-* `collect_data_to_db()` – full pipeline flow
-* `init_db_collection()` – database connection handling
+* Weather API fetching (`get_weather`)
+* Data transformation (`transform_data`)
+* Database saving (`save_data`)
+* Full pipeline flow (`collect_data_to_db`)
+* Database connection (`init_db_collection`)
 
 ## Running Tests
 
 Activate virtual environment:
 
-```
+```bash
 .\backend\.venv\Scripts\Activate.ps1
 ```
 
-Run tests:
+Run all tests:
 
-```
+```bash
 python -m unittest discover -s tests
 ```
 
 ## Notes
 
-* Uses `unittest` and `unittest.mock`
-* No real API or database is required
-* Scheduler loop is not tested (infinite loop)
+* Uses `unittest`
+* Uses fake objects instead of real API/database
+* No external services are required
+* Scheduler loop is not tested
 
 ## Summary
 
-These tests ensure the backend is reliable and handles both normal and error cases correctly.
+These tests ensure the backend works correctly and handles errors safely.
