@@ -26,7 +26,7 @@ streamlit run streamlit_app/Home.py
 cd frontend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 streamlit run streamlit_app/Home.py
 
 
