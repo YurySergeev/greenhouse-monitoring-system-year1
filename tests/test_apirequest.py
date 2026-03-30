@@ -316,6 +316,158 @@ class TestApiRequest(unittest.TestCase):
         apirequest.save_data({"temp_c": 21.0})
 
         self.assertEqual(len(fake_collection.inserted), 2)
+    
+        def test_transform_data_sets_area_again(self):
+            api_data = {
+                "main": {
+                    "temp": 25.0,
+                    "humidity": 50,
+                    "temp_min": 22.0,
+                    "temp_max": 27.0,
+                },
+                "name": "Kent",
+                "weather": [{"description": "sunny"}],
+            }
+
+            record = apirequest.transform_data(api_data)
+            self.assertEqual(record["area"], "upper_plants")
+
+    def test_transform_data_sets_sensor_type_again(self):
+        api_data = {
+            "main": {
+                "temp": 25.0,
+                "humidity": 50,
+                "temp_min": 22.0,
+                "temp_max": 27.0,
+            },
+            "name": "Kent",
+            "weather": [{"description": "sunny"}],
+        }
+
+        record = apirequest.transform_data(api_data)
+        self.assertEqual(record["sensor_type"], "weather")
+
+    def test_transform_data_sets_temp_min(self):
+        api_data = {
+            "main": {
+                "temp": 25.0,
+                "humidity": 50,
+                "temp_min": 22.0,
+                "temp_max": 27.0,
+            },
+            "name": "Kent",
+            "weather": [{"description": "sunny"}],
+        }
+
+        record = apirequest.transform_data(api_data)
+        self.assertEqual(record["temp_min"], 22.0)
+
+    def test_transform_data_sets_temp_max(self):
+        api_data = {
+            "main": {
+                "temp": 25.0,
+                "humidity": 50,
+                "temp_min": 22.0,
+                "temp_max": 27.0,
+            },
+            "name": "Kent",
+            "weather": [{"description": "sunny"}],
+        }
+
+        record = apirequest.transform_data(api_data)
+        self.assertEqual(record["temp_max"], 27.0)
+
+    def test_transform_data_uses_new_city_value(self):
+        api_data = {
+            "main": {
+                "temp": 19.0,
+                "humidity": 61,
+                "temp_min": 17.0,
+                "temp_max": 21.0,
+            },
+            "name": "Cleveland",
+            "weather": [{"description": "rain"}],
+        }
+
+        record = apirequest.transform_data(api_data)
+        self.assertEqual(record["city"], "Cleveland")
+
+    def test_get_weather_success_has_humidity(self):
+        apirequest.os.getenv = lambda key: "fake_key"
+
+        class FakeResponse:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {
+                    "main": {
+                        "temp": 18.5,
+                        "humidity": 70,
+                        "temp_min": 17.0,
+                        "temp_max": 20.0,
+                    },
+                    "name": "Akron",
+                    "weather": [{"description": "cloudy"}],
+                }
+
+        apirequest.requests.get = lambda *args, **kwargs: FakeResponse()
+
+        result = apirequest.get_weather()
+        self.assertEqual(result["main"]["humidity"], 70)
+
+    def test_get_weather_success_has_temp_max(self):
+        apirequest.os.getenv = lambda key: "fake_key"
+
+        class FakeResponse:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {
+                    "main": {
+                        "temp": 18.5,
+                        "humidity": 70,
+                        "temp_min": 17.0,
+                        "temp_max": 20.0,
+                    },
+                    "name": "Akron",
+                    "weather": [{"description": "cloudy"}],
+                }
+
+        apirequest.requests.get = lambda *args, **kwargs: FakeResponse()
+
+        result = apirequest.get_weather()
+        self.assertEqual(result["main"]["temp_max"], 20.0)
+
+    def test_save_data_keeps_first_insert_value(self):
+        fake_collection = _FakeCollection()
+        apirequest.collection = fake_collection
+
+        apirequest.save_data({"temp_c": 20.0})
+        apirequest.save_data({"temp_c": 21.0})
+
+        self.assertEqual(fake_collection.inserted[0]["temp_c"], 20.0)
+
+    def test_save_data_keeps_second_insert_value(self):
+        fake_collection = _FakeCollection()
+        apirequest.collection = fake_collection
+
+        apirequest.save_data({"temp_c": 20.0})
+        apirequest.save_data({"temp_c": 21.0})
+
+        self.assertEqual(fake_collection.inserted[1]["temp_c"], 21.0)
+
+    def test_collect_data_to_db_saves_once(self):
+        saved = []
+
+        apirequest.get_weather = lambda: {"main": {}, "weather": [{}], "name": "Akron"}
+        apirequest.transform_data = lambda data: {"done": True}
+        apirequest.save_data = lambda data: saved.append(data)
+
+        apirequest.collect_data_to_db()
+
+        self.assertEqual(len(saved), 1)
 
 
 if __name__ == "__main__":
