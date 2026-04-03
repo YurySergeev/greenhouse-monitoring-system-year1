@@ -1,7 +1,7 @@
 """
 dummy_sender.py
 ---------------
-Runs on your PC (not the Pico).
+Runs on PC 
 Simulates a Pico W sensor node by generating dummy data and POSTing
 it to the Flask server every INTERVAL seconds.
 
