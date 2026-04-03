@@ -6,6 +6,7 @@ class MockSensorNode:
         self.current_temp = 10.00
         self.current_humidity = 20.00
 
+<<<<<<< Updated upstream
     def get_readings(self):
         
         # Simulate reading update
@@ -23,6 +24,19 @@ class MockSensorNode:
         if(self.current_humidity < 0.00 or self.current_humidity > 100.00):
             self.current_humidity = 20.00
         
+=======
+    def __init__(self, 
+                 
+                 node_id: str = "pico_prototype_1",
+                 zone: str = "zone1", 
+                 area: str = "upper_plants"
+                 
+                 ):
+        
+        self.node_id          = node_id
+        self.zone             = zone
+        self.area             = area
+>>>>>>> Stashed changes
         
 
         return {
