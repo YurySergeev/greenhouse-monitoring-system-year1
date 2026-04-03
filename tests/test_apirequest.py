@@ -14,7 +14,7 @@ spec.loader.exec_module(apirequest)
 
 
 class _FakeCollection:
-    # Minimal Mongo-like stub to capture inserted documents.
+    
     def __init__(self):
         self.inserted = []
 
