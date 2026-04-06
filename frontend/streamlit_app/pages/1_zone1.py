@@ -75,15 +75,13 @@ st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 # ── Live readings (native st.metric) ──────────────────────────────────────────
 render_section_header("Live readings")
 
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3 = st.columns(3)
 with k1:
     st.metric("Temperature", f"{float(temp):.1f} °C" if temp is not None else "N/A")
 with k2:
     st.metric("Humidity", f"{float(humidity):.0f} %" if humidity is not None else "N/A")
 with k3:
     st.metric("Light", "N/A", help="Sensor not yet connected")
-with k4:
-    st.metric("Soil", "N/A", help="Sensor not yet connected")
 
 # ── Charts ─────────────────────────────────────────────────────────────────────
 render_section_header("History")
@@ -145,66 +143,33 @@ with c2:
     else:
         st.info("No humidity history yet.")
 
-# ── Soil gauge + Temp vs Humidity overlay ─────────────────────────────────────
-c3, c4 = st.columns(2)
-
-with c3:
-    soil_value = 5.5
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=soil_value,
-        title={"text": "Soil Moisture (%)"},
-        gauge={
-            "axis": {"range": [0, 100]},
-            "bar":  {"color": "#10B981", "thickness": 0.3},
-            "steps": [
-                {"range": [0,  25],  "color": "rgba(239,68,68,0.2)"},
-                {"range": [25, 50],  "color": "rgba(245,158,11,0.2)"},
-                {"range": [50, 75],  "color": "rgba(16,185,129,0.2)"},
-                {"range": [75, 100], "color": "rgba(59,130,246,0.2)"},
-            ],
-            "threshold": {
-                "line":      {"width": 3, "color": "#10B981"},
-                "thickness": 0.8,
-                "value":     soil_value,
-            },
-        },
+# ── Temp vs Humidity overlay (full width) ─────────────────────────────────────
+if not chart_df.empty and "temp_c" in chart_df.columns and "humidity_pct" in chart_df.columns:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=chart_df["ts"], y=chart_df["temp_c"],
+        mode="lines+markers", name="Temperature (°C)",
+        line=dict(color="#10B981", width=2), marker=dict(size=5), yaxis="y1",
+    ))
+    fig.add_trace(go.Scatter(
+        x=chart_df["ts"], y=chart_df["humidity_pct"],
+        mode="lines+markers", name="Humidity (%)",
+        line=dict(color="#3B82F6", width=2, dash="dash"), marker=dict(size=5), yaxis="y2",
     ))
     fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        height=320,
-        margin=dict(l=20, r=20, t=60, b=20),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        title=f"Temp vs Humidity  ·  {chart_source}",
+        xaxis=dict(showgrid=False, tickformat="%H:%M"),
+        yaxis=dict(title="°C", showgrid=True, gridcolor="rgba(128,128,128,0.15)"),
+        yaxis2=dict(title="%", overlaying="y", side="right", showgrid=False),
+        hovermode="x unified",
+        legend=dict(orientation="h", y=1.1, x=0),
+        margin=dict(l=0, r=0, t=50, b=0),
         font=dict(size=11),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-with c4:
-    if not chart_df.empty and "temp_c" in chart_df.columns and "humidity_pct" in chart_df.columns:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=chart_df["ts"], y=chart_df["temp_c"],
-            mode="lines+markers", name="Temperature (°C)",
-            line=dict(color="#10B981", width=2), marker=dict(size=5), yaxis="y1",
-        ))
-        fig.add_trace(go.Scatter(
-            x=chart_df["ts"], y=chart_df["humidity_pct"],
-            mode="lines+markers", name="Humidity (%)",
-            line=dict(color="#3B82F6", width=2, dash="dash"), marker=dict(size=5), yaxis="y2",
-        ))
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            title=f"Temp vs Humidity  ·  {chart_source}",
-            xaxis=dict(showgrid=False, tickformat="%H:%M"),
-            yaxis=dict(title="°C", showgrid=True, gridcolor="rgba(128,128,128,0.15)"),
-            yaxis2=dict(title="%", overlaying="y", side="right", showgrid=False),
-            hovermode="x unified",
-            legend=dict(orientation="h", y=1.1, x=0),
-            margin=dict(l=0, r=0, t=50, b=0),
-            font=dict(size=11),
-        )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    else:
-        st.info("No comparison data available yet.")
+else:
+    st.info("No comparison data available yet.")
 
 # ── Data table ─────────────────────────────────────────────────────────────────
 render_section_header("Raw data")
