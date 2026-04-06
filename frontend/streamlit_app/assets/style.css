@@ -48,15 +48,15 @@
     margin: 3px 0 0 0;
 }
 
-/* ── Live badge — green works in both modes ── */
+/* ── Live badge — rgba works in both light and dark modes ── */
 .live-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 11px;
     font-weight: 600;
-    color: #065F46;
-    background: #D1FAE5;
+    color: #10B981;
+    background: rgba(16, 185, 129, 0.15);
     padding: 4px 10px;
     border-radius: 20px;
 }
@@ -136,37 +136,37 @@
 .trend-warn { color: #DC2626 !important; opacity: 1 !important; }
 
 /* ── Buttons ── */
-.stButton > button {
-    background: var(--secondary-background-color) !important;
-    border: 1px solid rgba(128, 128, 128, 0.25) !important;
-    color: var(--text-color) !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    border-radius: 8px !important;
-    padding: 6px 14px !important;
-    transition: background 0.15s ease, border-color 0.15s ease !important;
+.stApp .stButton > button {
+    background: var(--secondary-background-color);
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 6px 14px;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.stButton > button:hover {
-    border-color: rgba(128, 128, 128, 0.5) !important;
+.stApp .stButton > button:hover {
+    border-color: rgba(128, 128, 128, 0.5);
 }
 
 /* ── Radio ── */
-div[data-testid="stRadio"] label p {
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    color: var(--text-color) !important;
+.stApp div[data-testid="stRadio"] label p {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-color);
 }
 
-div[data-testid="stRadio"] div[role="radiogroup"] {
-    gap: 10px !important;
+.stApp div[data-testid="stRadio"] div[role="radiogroup"] {
+    gap: 10px;
 }
 
 /* ── Divider ── */
-hr {
-    border: none !important;
-    border-top: 1px solid rgba(128, 128, 128, 0.2) !important;
-    margin: 16px 0 !important;
+.stApp hr {
+    border: none;
+    border-top: 1px solid rgba(128, 128, 128, 0.2);
+    margin: 16px 0;
 }
 
 /* ── Section header ── */
@@ -200,7 +200,7 @@ hr {
 }
 
 /* ── Caption ── */
-.stCaption {
+[data-testid="stCaptionContainer"] p {
     font-size: 11px !important;
     color: var(--text-color) !important;
     opacity: 0.45 !important;

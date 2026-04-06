@@ -135,7 +135,7 @@ def render_metrics_row(temp, humidity, weather, temp_unit="°C"):
     display_humidity = f"{humidity}<span class='metric-unit'>%</span>" if humidity is not None else "N/A"
     display_weather  = str(weather).title() if weather is not None else "N/A"
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         render_metric_card("Temperature", display_temp, "chip-green", "🌡️",
@@ -144,9 +144,6 @@ def render_metrics_row(temp, humidity, weather, temp_unit="°C"):
         render_metric_card("Humidity", display_humidity, "chip-blue", "💧",
                            "— stable")
     with col3:
-        render_metric_card("Soil Moisture", "5.5<span class='metric-unit'>%</span>",
-                           "chip-amber", "🪴", "↓ low — check soon", "trend-warn")
-    with col4:
         render_metric_card("Weather",
                            f'<span style="font-size:18px;font-weight:500;">{display_weather}</span>',
                            "chip-gray", "🌤️", "Akron, OH")
@@ -158,13 +155,15 @@ def render_metrics_row(temp, humidity, weather, temp_unit="°C"):
 # Section header
 # --------------------------------------------------
 
-def render_section_header(title: str, icon: str | None = None):
-    icon_html = f'<span style="font-size:18px;">{icon}</span>' if icon else ""
+def render_section_header(title: str, icon = None):
+    # Added a space after the closing span tag so it doesn't crowd the title if an icon exists
+    icon_html = f'<span style="font-size:18px;">{icon}</span> ' if icon else ""
+    
+    # Placed {icon_html} and the <h2> tag on the same line
     html = f"""
     <div>
         <div class="section-title-container">
-            {icon_html}
-            <h2 class="section-title">{title}</h2>
+            {icon_html}<h2 class="section-title">{title}</h2>
         </div>
         <div class="section-divider"></div>
     </div>
@@ -252,7 +251,6 @@ def render_zone_health(temp, humidity):
     <div style="padding:4px 0;">
         {_row("Temperature",  temp_pct, "Good" if temp_color == "good" else "High", temp_color)}
         {_row("Humidity",     hum_pct,  "Good" if hum_color  == "good" else "Low",  hum_color)}
-        {_row("Soil moisture", 20,      "Low",   "bad")}
         {_row("Sensor uptime", 99,      "99.2%", "good")}
     </div>
     """, unsafe_allow_html=True)
