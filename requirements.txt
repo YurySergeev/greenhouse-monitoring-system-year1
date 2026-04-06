@@ -18,6 +18,10 @@ pymongo
 dnspython
 certifi
 pymongo[srv]
+requests
+pymongo
+schedule
+dotenv
 
 # --- Data Engineering & Visualization ---
 pandas
