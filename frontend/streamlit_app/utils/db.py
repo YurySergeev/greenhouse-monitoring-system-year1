@@ -37,16 +37,23 @@ def load_latest_reading(zone="zone1", area="upper_plants", source="openweather")
 
 
 @st.cache_data(ttl=60)
-def load_history(zone="zone1", area="upper_plants", source="openweather", hours=24):
+def load_history(zone="zone1", area="upper_plants", source="openweather", hours=24, start_ts=None, end_ts=None):
     client, db = init_connection()
     if db is None:
         return pd.DataFrame()
-    since = pd.Timestamp.utcnow() - pd.Timedelta(hours=hours)
+        
+    # Build the time query (Custom Range vs Last X Hours)
+    if start_ts and end_ts:
+        ts_query = {"$gte": start_ts, "$lte": end_ts}
+    else:
+        since = pd.Timestamp.utcnow() - pd.Timedelta(hours=hours)
+        ts_query = {"$gte": since.to_pydatetime()}
+
     docs = list(db.weather_data.find(
-        {"zone": zone, "area": area, "source": source,
-         "ts": {"$gte": since.to_pydatetime()}},
+        {"zone": zone, "area": area, "source": source, "ts": ts_query},
         {"_id": 0, "ts": 1, "temp_c": 1, "humidity_pct": 1, "weather_desc": 1}
     ).sort("ts", 1))
+    
     df = pd.DataFrame(docs)
     if not df.empty and "ts" in df.columns:
         df["ts"] = pd.to_datetime(df["ts"])
@@ -82,7 +89,7 @@ def load_latest_sensor(zone="zone1", area="upper_plants"):
     client, db = init_connection()
     if db is None:
         return None
-    doc = db.sensor_readings.find_one(
+    doc = db.zone1_dht22_test.find_one(
         {"zone": zone, "area": area, "source": "pico_w"},
         sort=[("ts", -1)]
     )
@@ -92,25 +99,30 @@ def load_latest_sensor(zone="zone1", area="upper_plants"):
 
 
 @st.cache_data(ttl=60)
-def load_sensor_history(zone="zone1", area="upper_plants", hours=24):
+def load_sensor_history(zone="zone1", area="upper_plants", hours=24, start_ts=None, end_ts=None):
     """
-    Returns a DataFrame of Pico W readings for the past `hours` hours.
-    Columns: ts, temperature_c, humidity_rh
+    Returns a DataFrame of Pico W readings based on hours or a specific date range.
     """
     client, db = init_connection()
     if db is None:
         return pd.DataFrame()
-    since = pd.Timestamp.utcnow() - pd.Timedelta(hours=hours)
-    docs = list(db.sensor_readings.find(
-        {"zone": zone, "area": area, "source": "pico_w",
-         "ts": {"$gte": since.to_pydatetime()}},
+        
+    # Build the time query
+    if start_ts and end_ts:
+        ts_query = {"$gte": start_ts, "$lte": end_ts}
+    else:
+        since = pd.Timestamp.utcnow() - pd.Timedelta(hours=hours)
+        ts_query = {"$gte": since.to_pydatetime()}
+
+    docs = list(db.zone1_dht22_test.find(
+        {"zone": zone, "area": area, "source": "pico_w", "ts": ts_query},
         {"_id": 0, "ts": 1, "temperature_c": 1, "humidity_rh": 1, "node_id": 1}
     ).sort("ts", 1))
+    
     df = pd.DataFrame(docs)
     if not df.empty and "ts" in df.columns:
         df["ts"] = pd.to_datetime(df["ts"])
     return df
-
 
 @st.cache_data(ttl=30)
 def load_sensor_readings(zone="zone1", area="upper_plants", limit=50):
@@ -121,7 +133,7 @@ def load_sensor_readings(zone="zone1", area="upper_plants", limit=50):
     if db is None:
         return []
     docs = list(
-        db.sensor_readings.find(
+        db.zone1_dht22_test.find(
             {"zone": zone, "area": area, "source": "pico_w"},
         ).sort("ts", -1).limit(limit)
     )

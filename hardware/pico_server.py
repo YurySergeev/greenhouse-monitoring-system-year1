@@ -19,7 +19,7 @@ DB_NAME   = os.getenv("DB_NAME", "greenhouse_db").strip()
 try:
     client     = MongoClient(MONGO_URI, tls=True, tlsCAFile=certifi.where())
     db         = client[DB_NAME]
-    collection = db["sensor_readings"]
+    collection = db["zone1_dht22_test"]
     # Ping to confirm connection on startup
     client.admin.command("ping")
     print(f"[DB] Connected to MongoDB — '{DB_NAME}'")
@@ -47,7 +47,7 @@ def receive_data():
 
     Expected payload from Pico:
     {
-        "node_id":        "pico_prototype_1",
+        "node_id":        "pico_prototype_1_sensorType",
         "temperature_c":  23.4,
         "humidity_rh":    58.0
     }

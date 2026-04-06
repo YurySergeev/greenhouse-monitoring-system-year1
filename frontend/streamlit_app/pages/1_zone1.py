@@ -62,10 +62,12 @@ if pico_latest:
 # Source indicator
 if pico_latest:
     pico_ts = pico_latest.get("ts")
-    ts_str  = pd.to_datetime(pico_ts).strftime("%H:%M:%S") if pico_ts else "unknown"
+    # Convert UTC to US/Eastern
+    if pico_ts:
+        ts_str = pd.to_datetime(pico_ts).tz_localize('UTC').tz_convert('US/Eastern').strftime("%I:%M:%S %p")
+    else:
+        ts_str = "unknown"
     st.caption(f"🟢 Sensor data — Pico W · last reading at {ts_str}")
-else:
-    st.caption("🟡 No Pico W data yet — showing OpenWeather fallback")
 
 # ── Metric cards ───────────────────────────────────────────────────────────────
 render_metrics_row(temp, humidity, weather, temp_unit=unit)
@@ -75,19 +77,64 @@ st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 # ── Live readings (native st.metric) ──────────────────────────────────────────
 render_section_header("Live readings")
 
+if temp is not None:
+    display_temp = (temp * 9/5) + 32 if unit == "°F" else temp
+    temp_string = f"{float(display_temp):.1f} {unit}"
+else:
+    temp_string = "N/A"
+
 k1, k2, k3 = st.columns(3)
 with k1:
-    st.metric("Temperature", f"{float(temp):.1f} °C" if temp is not None else "N/A")
+    st.metric("Temperature", temp_string)
 with k2:
     st.metric("Humidity", f"{float(humidity):.0f} %" if humidity is not None else "N/A")
 with k3:
     st.metric("Light", "N/A", help="Sensor not yet connected")
-
 # ── Charts ─────────────────────────────────────────────────────────────────────
 render_section_header("History")
 
-sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=24)
-weather_df = load_history(zone="zone1", area="upper_plants", source="openweather", hours=24)
+st.markdown("**Filter Data Range**")
+col_radio, col_date = st.columns([1, 2])
+
+with col_radio:
+    time_mode = st.radio("Range Type", ["Last 24 Hours", "Last 7 Days", "Custom Range"], label_visibility="collapsed")
+
+start_time = None
+end_time = None
+hours = 24
+
+with col_date:
+    if time_mode == "Last 24 Hours":
+        hours = 24
+    elif time_mode == "Last 7 Days":
+        hours = 168 # 24 * 7
+    else:
+        # Custom Range: Date Picker
+        today = pd.Timestamp.now('US/Eastern').date()
+        date_range = st.date_input("Select Date Range", (today - pd.Timedelta(days=2), today))
+        
+        # Only show time pickers IF they have successfully selected a start and end date
+        if len(date_range) == 2:
+            # Create two small columns for the time pickers
+            t_col1, t_col2 = st.columns(2)
+            with t_col1:
+                start_t = st.time_input("Start Time", value=pd.Timestamp('00:00:00').time())
+            with t_col2:
+                end_t = st.time_input("End Time", value=pd.Timestamp('23:59:59').time())
+            
+            # 1. Combine the selected Date + Time into a single Pandas datetime object
+            start_combined = pd.to_datetime(f"{date_range[0]} {start_t}")
+            end_combined = pd.to_datetime(f"{date_range[1]} {end_t}")
+            
+            # 2. Assign the Eastern timezone, then convert to UTC for the database!
+            start_time = start_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
+            end_time = end_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
+            hours = None # Turn off the "hours" fallback
+
+# --- PASS THE NEW FILTERS INTO THE DATABASE ---
+sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=hours, start_ts=start_time, end_ts=end_time)
+weather_df = load_history(zone="zone1", area="upper_plants", source="openweather", hours=hours, start_ts=start_time, end_ts=end_time)
+
 
 if not sensor_df.empty:
     chart_df     = sensor_df.rename(columns={"temperature_c": "temp_c", "humidity_rh": "humidity_pct"})
@@ -99,6 +146,9 @@ else:
     chart_df     = pd.DataFrame()
     chart_source = None
 
+if not chart_df.empty and "ts" in chart_df.columns:
+    chart_df["ts"] = pd.to_datetime(chart_df["ts"]).dt.tz_localize('UTC').dt.tz_convert('US/Eastern')
+    
 c1, c2 = st.columns(2)
 
 with c1:
@@ -163,8 +213,13 @@ if not chart_df.empty and "temp_c" in chart_df.columns and "humidity_pct" in cha
         yaxis=dict(title="°C", showgrid=True, gridcolor="rgba(128,128,128,0.15)"),
         yaxis2=dict(title="%", overlaying="y", side="right", showgrid=False),
         hovermode="x unified",
-        legend=dict(orientation="h", y=1.1, x=0),
-        margin=dict(l=0, r=0, t=50, b=0),
+        
+        # 1. Move legend below the x-axis, centered
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
+        
+        # 2. Add 40px of bottom margin (b=40) so the legend doesn't get cut off
+        margin=dict(l=0, r=0, t=50, b=40),
+        
         font=dict(size=11),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -192,7 +247,8 @@ if table_df.empty:
     st.info("No readings found yet.")
 else:
     if "ts" in table_df.columns:
-        table_df["ts"] = pd.to_datetime(table_df["ts"])
+        # Convert table timestamps to Eastern Time
+        table_df["ts"] = pd.to_datetime(table_df["ts"]).dt.tz_localize('UTC').dt.tz_convert('US/Eastern')
     st.dataframe(table_df, use_container_width=True)
 
 st.markdown("---")
