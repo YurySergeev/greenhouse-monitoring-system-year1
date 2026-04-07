@@ -9,8 +9,8 @@ on:
 env:
   HOST: greenhouse.kentcs.org
   USER: greenhouse
-  TARGET: greenhouse@greenhouse.kentcs.edu
-  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.kentcs.edu
+  TARGET: greenhouse@greenhouse.kentcs.org
+  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.kentcs.org
   COPY: scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
 
 jobs:
@@ -40,14 +40,14 @@ jobs:
           echo $RUN ls -la
           $RUN ls -la
 
-          echo $ ssh greenhouse@greenhouse.kentcs.edu ls -la
-          ssh greenhouse@greenhouse.kentcs.edu ls -la 
-          echo $ ssh greenhouse@greenhouse.kentcs.edu whoami
-          ssh greenhouse@greenhouse.kentcs.edu whoami 
-          echo $ ssh greenhouse@greenhouse.kentcs.edu hostname
-          ssh greenhouse@greenhouse.kentcs.edu hostname
-          echo $ greenhouse@greenhouse.kentcs.edu mkdir -p ./web
-          ssh greenhouse@greenhouse.kentcs.edu mkdir -p ./web
+          echo $ ssh greenhouse@greenhouse.kentcs.org ls -la
+          ssh greenhouse@greenhouse.kentcs.org ls -la 
+          echo $ ssh greenhouse@greenhouse.kentcs.org whoami
+          ssh greenhouse@greenhouse.kentcs.org whoami 
+          echo $ ssh greenhouse@greenhouse.kentcs.org hostname
+          ssh greenhouse@greenhouse.kentcs.org hostname
+          echo $ greenhouse@greenhouse.kentcs.org mkdir -p ./web
+          ssh greenhouse@greenhouse.kentcs.org mkdir -p ./web
 
           echo " Zipping project locally "
           zip -r greenhouse.zip . 
@@ -58,8 +58,8 @@ jobs:
           $RUN "rm -f ~/web/greenhouse.zip"
 
           echo " Copying zip to Cassini "
-          echo $COPY greenhouse.zip greenhouse@greenhouse.kentcs.edu:./web
-          $COPY greenhouse.zip greenhouse@greenhouse.kentcs.edu:./web
+          echo $COPY greenhouse.zip greenhouse@greenhouse.kentcs.org:./web
+          $COPY greenhouse.zip greenhouse@greenhouse.kentcs.org:./web
 
           echo " Unzipping on Cassini "
           $RUN "cd ~/web && python3 -m zipfile -e greenhouse.zip ."
