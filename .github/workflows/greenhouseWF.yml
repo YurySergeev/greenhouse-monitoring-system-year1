@@ -1,0 +1,68 @@
+name: GreenHouseWF
+
+on: 
+  push:
+    branches:
+      - Dev
+  workflow_dispatch:
+
+env:
+  HOST: greenhouse.kentcs.org
+  USER: greenhouse
+  TARGET: greenhouse@greenhouse.kentcs.edu
+  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.kentcs.edu
+  COPY: scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
+
+jobs:
+  example_workflow:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Get our files
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.ID_ED25519 }}
+          name: id_ed25519
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Check out the VM
+        run: |
+          echo $ ls -la
+          ls -la
+          echo $ whoami
+          whoami 
+
+      - name: Check out cassini
+        run: |
+          echo $RUN ls -la
+          $RUN ls -la
+
+          echo $ ssh greenhouse@greenhouse.kentcs.edu ls -la
+          ssh greenhouse@greenhouse.kentcs.edu ls -la 
+          echo $ ssh greenhouse@greenhouse.kentcs.edu whoami
+          ssh greenhouse@greenhouse.kentcs.edu whoami 
+          echo $ ssh greenhouse@greenhouse.kentcs.edu hostname
+          ssh greenhouse@greenhouse.kentcs.edu hostname
+          echo $ greenhouse@greenhouse.kentcs.edu mkdir -p ./web
+          ssh greenhouse@greenhouse.kentcs.edu mkdir -p ./web
+
+          echo " Zipping project locally "
+          zip -r greenhouse.zip . 
+          ls -lh greenhouse.zip
+
+          echo "Clean up old project on Cassini"
+          $RUN "rm -rf ~/web/GREENHOUSE-MONITORING-SYSTEM"
+          $RUN "rm -f ~/web/greenhouse.zip"
+
+          echo " Copying zip to Cassini "
+          echo $COPY greenhouse.zip greenhouse@greenhouse.kentcs.edu:./web
+          $COPY greenhouse.zip greenhouse@greenhouse.kentcs.edu:./web
+
+          echo " Unzipping on Cassini "
+          $RUN "cd ~/web && python3 -m zipfile -e greenhouse.zip ."
+
+          echo " Move extracted folder into place (if needed)"
+          $RUN "cd ~/web && if [ -d './GREENHOUSE-MONITORING-SYSTEM-main' ]; then mv GREENHOUSE-MONITORING-SYSTEM-main GREENHOUSE-MONITORING-SYSTEM; fi"
