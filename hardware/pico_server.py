@@ -5,6 +5,7 @@ import certifi
 import os
 import logging
 from dotenv import load_dotenv
+from werkzeug.serving import make_server
 
 # -- Load env first --
 load_dotenv()
@@ -30,6 +31,7 @@ DB_NAME   = os.getenv("DB_NAME", "greenhouse_db").strip()
 # Sorted by collection -> sent to mongo
 # Collection can be shared by multiple nodes
 # --------------------------------------------------
+
 
 NODE_REGISTRY = {
     "pico_prototype_1_dht22": {
@@ -64,6 +66,7 @@ except Exception as e:
 
 _connected_nodes: dict = {}
 
+###########################################
 
 # --------------------------------------------------
 # Helpers
@@ -75,7 +78,7 @@ def _ts() -> str: # -- HH:MM:SS string for log
 
 
 def _print_banner():
-    width = 30
+    width = 55
     print("┌" + "─" * width + "┐")
     print("│" + "  Greenhouse Pico W Server".center(width) + "│")
     print("├" + "─" * width + "┤")
@@ -88,7 +91,7 @@ def _print_banner():
     print("├" + "─" * width + "┤")
     print("│" + f"  Registered nodes: {len(NODE_REGISTRY)}".ljust(width) + "│")
     for nid, cfg in NODE_REGISTRY.items():
-        line = f"     {nid}  →  {cfg['zone']} / {cfg['area']}"
+        line = f"     {nid}  -  {cfg['zone']} / {cfg['area']}"
         print("│" + line[:width].ljust(width) + "│")
  
     print("└" + "─" * width + "┘")
@@ -262,5 +265,19 @@ def receive_data():
 if __name__ == "__main__":
     # host='0.0.0.0' lets devices on the same Wi-Fi reach this server.
     # Change port if 5000 is taken.
-    print("[Server] Starting on 0.0.0.0:5000 ...")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    
+    host = "0.0.0.0"
+    port = 5000
+
+    #initialize
+    server = make_server(host, port, app)
+    
+    _print_banner()
+    
+    print(f"[Server] Server started on {host}:{port} ...")
+    
+    
+    server.serve_forever() #Starts blocking loop
+    
+    
+    
