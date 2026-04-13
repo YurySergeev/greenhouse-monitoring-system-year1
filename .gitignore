@@ -1,9 +1,9 @@
 # =====================
 # Secrets / environment
 # =====================
-#.env
-#.env.*
-#backend/env
+.env
+.env.*
+backend/env
 
 # =====================
 # Virtual environments
