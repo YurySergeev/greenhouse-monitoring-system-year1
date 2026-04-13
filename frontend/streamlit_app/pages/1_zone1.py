@@ -235,7 +235,7 @@ with col_date:
 
 # --- PASS THE NEW FILTERS INTO THE DATABASE ---
 sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=hours, start_ts=start_time, end_ts=end_time)
-weather_df = load_history(zone="zone1", area="upper_plants", source="openweather", hours=hours, start_ts=start_time, end_ts=end_time)
+weather_df = load_history(zone="zone1", area="upper_plants", source="zone1_dht22_test", hours=hours, start_ts=start_time, end_ts=end_time)
 
 
 if not sensor_df.empty:
@@ -342,7 +342,7 @@ limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, 
 if data_source_toggle == "Pico W sensor":
     docs = load_sensor_readings(zone="zone1", area="upper_plants", limit=limit)
 else:
-    docs = load_readings(zone="zone1", area="upper_plants", source="openweather", limit=limit)
+    docs = load_readings(zone="zone1", area="upper_plants", source="zone1_dht22_test", limit=limit)
 
 table_df = pd.DataFrame(docs)
 if table_df.empty:
