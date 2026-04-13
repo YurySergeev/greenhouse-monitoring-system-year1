@@ -10,8 +10,6 @@ python-dotenv
 flask
 streamlit
 pymongo
-pytest
-schedule
 
 # --- Database & Security ---
 pymongo

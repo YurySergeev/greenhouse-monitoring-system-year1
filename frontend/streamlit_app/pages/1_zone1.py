@@ -10,6 +10,8 @@ import plotly.express as px
 from utils.config import CITY
 from utils.styles import load_css
 from utils.weather import fetch_weather_data
+
+
 from utils.db import (
     load_latest_reading,
     load_history,
@@ -18,6 +20,8 @@ from utils.db import (
     load_sensor_history,
     load_sensor_readings,
 )
+
+
 from utils.layout import (
     render_zone_header,
     render_refresh_update,
@@ -33,6 +37,104 @@ from utils.emailer import send_temperature_alert_email, send_humidity_alert_emai
 st.set_page_config(page_title="Zone 1", layout="wide")
 load_css()  # ← must be here, right after set_page_config
 
+# ── Apply current theme ────────────────────────────────────────────────────────
+if "theme" not in st.session_state:
+    st.session_state.theme = "Feeling Green"
+
+if True:
+    from utils.themes import THEMES
+    import matplotlib.colors as plt
+    current_theme = THEMES[st.session_state.theme]
+    background_color = plt.XKCD_COLORS[current_theme["background"]]
+    sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
+    title_color = plt.XKCD_COLORS[current_theme["title"]]
+    boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
+    top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
+    text_color = current_theme["text_color"]
+    title_text_color = current_theme.get("title_text_color", text_color)
+    caption_color = current_theme.get("caption_color", text_color)
+    zone_text_color = current_theme.get("zone_text_color", text_color)
+
+    # helper to resolve color
+    def _resolve_color(value):
+        if isinstance(value, str) and value.startswith("xkcd:"):
+            return plt.XKCD_COLORS[value]
+        return value
+
+    subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
+
+    # Set theme variables
+    st.markdown(f"""
+    <style>
+    :root {{
+        --background-color: {background_color};
+        --sidebar-color: {sidebar_color};
+        --title-color: {title_color};
+        --boxes-color: {boxes_color};
+        --top-bar-color: {top_bar_color};
+        --text-color: {text_color};
+        --subtitle-color: {subtitle_color};
+        --secondary-background-color: {boxes_color};
+        --title-text-color: {title_text_color};
+        --caption-color: {caption_color};
+        --zone-text-color: {zone_text_color};
+    }}
+    
+    /* Zone 1 text color overrides - universal */
+    /* Apply white text to ALL elements on the page */
+    * {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Specifically target markdown and text content */
+    [data-testid="stMarkdown"] {{
+        color: {zone_text_color} !important;
+    }}
+    
+    [data-testid="stCaption"] {{
+        color: {zone_text_color} !important;
+    }}
+    
+    [data-testid="stCaption"] * {{
+        color: {zone_text_color} !important;
+    }}
+    
+    [data-testid="stCaption"] p,
+    [data-testid="stCaption"] span,
+    [data-testid="stCaption"] small {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Force white on all text elements - override inline styles */
+    [style*="color"] {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Force white on small text and captions */
+    small {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Target elements by their tag names more aggressively */
+    p {{
+        color: {zone_text_color} !important;
+    }}
+    
+    span {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Override any specific page classes */
+    .page-title,
+    .page-subtitle {{
+        color: {zone_text_color} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Store theme color in session state for layout functions
+    st.session_state["zone_text_color"] = zone_text_color
+
 render_sidebar()
 
 # ── Header ─────────────────────────────────────────────────────────────────────
@@ -45,7 +147,7 @@ section, unit = render_zone1_top_controls()
 # Priority: Pico W (inside greenhouse) > OpenWeather mongo > live API fallback
 
 pico_latest  = load_latest_sensor(zone="zone1", area="upper_plants")
-mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="openweather")
+mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="zone1_dht22_test")
 api_temp, api_humidity, api_desc, _ = fetch_weather_data()
 
 temp     = api_temp
@@ -271,7 +373,7 @@ with col_date:
 
 # --- PASS THE NEW FILTERS INTO THE DATABASE ---
 sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=hours, start_ts=start_time, end_ts=end_time)
-weather_df = load_history(zone="zone1", area="upper_plants", source="openweather", hours=hours, start_ts=start_time, end_ts=end_time)
+weather_df = load_history(zone="zone1", area="upper_plants", source="zone1_dht22_test", hours=hours, start_ts=start_time, end_ts=end_time)
 
 
 if not sensor_df.empty:
@@ -378,7 +480,7 @@ limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, 
 if data_source_toggle == "Pico W sensor":
     docs = load_sensor_readings(zone="zone1", area="upper_plants", limit=limit)
 else:
-    docs = load_readings(zone="zone1", area="upper_plants", source="openweather", limit=limit)
+    docs = load_readings(zone="zone1", area="upper_plants", source="zone1_dht22_test", limit=limit)
 
 table_df = pd.DataFrame(docs)
 if table_df.empty:

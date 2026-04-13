@@ -47,7 +47,9 @@ def render_refresh_update():
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     col_time, col_btn = st.columns([5, 1])
     with col_time:
-        st.caption(f"Last synced: {now}")
+        # Get theme color from session state, fallback to #ffffff
+        color = st.session_state.get("zone_text_color", "#ffffff")
+        st.markdown(f'<p style="font-size: 0.875rem; color: {color}; margin: 0;">Last synced: {now}</p>', unsafe_allow_html=True)
     with col_btn:
         if st.button("Refresh", use_container_width=True):
             st.session_state["last_update"] = datetime.now()
@@ -94,7 +96,9 @@ def render_zone1_top_controls():
     with col_alerts:
         with st.container(border=True):
             st.markdown("**Alerts**")
-            st.caption("No active alerts — all sensors nominal.")
+            # Get theme color from session state, fallback to #ffffff
+            color = st.session_state.get("zone_text_color", "#ffffff")
+            st.markdown(f'<p style="font-size: 0.875rem; color: {color}; margin: 0;">No active alerts — all sensors nominal.</p>', unsafe_allow_html=True)
 
     section = st.session_state["zone1_section"]
     return section, unit
