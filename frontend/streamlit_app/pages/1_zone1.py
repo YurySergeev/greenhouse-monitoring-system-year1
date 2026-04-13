@@ -75,6 +75,10 @@ if pico_latest:
 zone_alert_settings = get_zone_alert("zone1")
 temp_alert = evaluate_temperature_alert(temp, zone="zone1")
 humidity_alert = evaluate_humidity_alert(humidity, zone="zone1")
+# Use recipient list with fallback to legacy single-recipient key.
+email_recipients = zone_alert_settings.get("email_recipients") or []
+if not email_recipients and zone_alert_settings.get("email_to"):
+    email_recipients = [zone_alert_settings.get("email_to")]
 # Collect one or more outbound email results for user visibility.
 email_status_msgs = []
 
@@ -98,20 +102,24 @@ elif temp_alert and temp_alert["kind"] == "low":
         f"Low temperature alert: {alert_temp_display:.1f} {unit} is below "
         f"the minimum threshold ({alert_threshold_display:.1f} {unit})."
     )
-    if zone_alert_settings.get("email_enabled", False) and zone_alert_settings.get("email_to"):
+    if zone_alert_settings.get("email_enabled", False) and email_recipients:
         cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
         # Cooldown is metric-specific so humidity emails do not block temperature emails.
         if should_send_email_alert("zone1", "low", cooldown_minutes=cooldown, metric="temperature"):
-            ok, msg = send_temperature_alert_email(
-                recipient=zone_alert_settings.get("email_to", ""),
-                zone="zone1",
-                kind="low",
-                temp_c=float(temp_alert["temp_c"]),
-                threshold_c=float(temp_alert["threshold_c"]),
-            )
-            if ok:
+            sent_any = False
+            # Send to each configured recipient and aggregate per-address status.
+            for recipient in email_recipients:
+                ok, msg = send_temperature_alert_email(
+                    recipient=recipient,
+                    zone="zone1",
+                    kind="low",
+                    temp_c=float(temp_alert["temp_c"]),
+                    threshold_c=float(temp_alert["threshold_c"]),
+                )
+                sent_any = sent_any or ok
+                email_status_msgs.append(f"{recipient}: {msg}")
+            if sent_any:
                 mark_email_alert_sent("zone1", "low", metric="temperature")
-            email_status_msgs.append(msg)
 elif temp_alert and temp_alert["kind"] == "high":
     alert_temp_display = temp_alert["temp_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["temp_c"]
     alert_threshold_display = temp_alert["threshold_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["threshold_c"]
@@ -119,19 +127,22 @@ elif temp_alert and temp_alert["kind"] == "high":
         f"High temperature alert: {alert_temp_display:.1f} {unit} exceeds "
         f"the maximum threshold ({alert_threshold_display:.1f} {unit})."
     )
-    if zone_alert_settings.get("email_enabled", False) and zone_alert_settings.get("email_to"):
+    if zone_alert_settings.get("email_enabled", False) and email_recipients:
         cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
         if should_send_email_alert("zone1", "high", cooldown_minutes=cooldown, metric="temperature"):
-            ok, msg = send_temperature_alert_email(
-                recipient=zone_alert_settings.get("email_to", ""),
-                zone="zone1",
-                kind="high",
-                temp_c=float(temp_alert["temp_c"]),
-                threshold_c=float(temp_alert["threshold_c"]),
-            )
-            if ok:
+            sent_any = False
+            for recipient in email_recipients:
+                ok, msg = send_temperature_alert_email(
+                    recipient=recipient,
+                    zone="zone1",
+                    kind="high",
+                    temp_c=float(temp_alert["temp_c"]),
+                    threshold_c=float(temp_alert["threshold_c"]),
+                )
+                sent_any = sent_any or ok
+                email_status_msgs.append(f"{recipient}: {msg}")
+            if sent_any:
                 mark_email_alert_sent("zone1", "high", metric="temperature")
-            email_status_msgs.append(msg)
 else:
     st.success(
         f"Temperature is within range ({threshold_min_display:.1f} to "
@@ -151,37 +162,44 @@ elif humidity_alert and humidity_alert["kind"] == "low":
         f"Low humidity alert: {humidity_alert['humidity_pct']:.0f}% is below "
         f"the minimum threshold ({humidity_alert['threshold_pct']:.0f}%)."
     )
-    if zone_alert_settings.get("email_enabled", False) and zone_alert_settings.get("email_to"):
+    if zone_alert_settings.get("email_enabled", False) and email_recipients:
         cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
         if should_send_email_alert("zone1", "low", cooldown_minutes=cooldown, metric="humidity"):
-            ok, msg = send_humidity_alert_email(
-                recipient=zone_alert_settings.get("email_to", ""),
-                zone="zone1",
-                kind="low",
-                humidity_pct=float(humidity_alert["humidity_pct"]),
-                threshold_pct=float(humidity_alert["threshold_pct"]),
-            )
-            if ok:
+            sent_any = False
+            # Send to each configured recipient and aggregate per-address status.
+            for recipient in email_recipients:
+                ok, msg = send_humidity_alert_email(
+                    recipient=recipient,
+                    zone="zone1",
+                    kind="low",
+                    humidity_pct=float(humidity_alert["humidity_pct"]),
+                    threshold_pct=float(humidity_alert["threshold_pct"]),
+                )
+                sent_any = sent_any or ok
+                email_status_msgs.append(f"{recipient}: {msg}")
+            if sent_any:
                 mark_email_alert_sent("zone1", "low", metric="humidity")
-            email_status_msgs.append(msg)
 elif humidity_alert and humidity_alert["kind"] == "high":
     st.error(
         f"High humidity alert: {humidity_alert['humidity_pct']:.0f}% exceeds "
         f"the maximum threshold ({humidity_alert['threshold_pct']:.0f}%)."
     )
-    if zone_alert_settings.get("email_enabled", False) and zone_alert_settings.get("email_to"):
+    if zone_alert_settings.get("email_enabled", False) and email_recipients:
         cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
         if should_send_email_alert("zone1", "high", cooldown_minutes=cooldown, metric="humidity"):
-            ok, msg = send_humidity_alert_email(
-                recipient=zone_alert_settings.get("email_to", ""),
-                zone="zone1",
-                kind="high",
-                humidity_pct=float(humidity_alert["humidity_pct"]),
-                threshold_pct=float(humidity_alert["threshold_pct"]),
-            )
-            if ok:
+            sent_any = False
+            for recipient in email_recipients:
+                ok, msg = send_humidity_alert_email(
+                    recipient=recipient,
+                    zone="zone1",
+                    kind="high",
+                    humidity_pct=float(humidity_alert["humidity_pct"]),
+                    threshold_pct=float(humidity_alert["threshold_pct"]),
+                )
+                sent_any = sent_any or ok
+                email_status_msgs.append(f"{recipient}: {msg}")
+            if sent_any:
                 mark_email_alert_sent("zone1", "high", metric="humidity")
-            email_status_msgs.append(msg)
 else:
     st.success(f"Humidity is within range ({humidity_min:.0f}% to {humidity_max:.0f}%).")
 

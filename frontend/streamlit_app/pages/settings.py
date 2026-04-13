@@ -43,6 +43,10 @@ selected_zone = st.selectbox(
 )
 
 zone_settings = get_zone_alert(selected_zone)
+# Seed the UI from persisted recipients, with legacy single-email fallback.
+current_recipients = zone_settings.get("email_recipients") or []
+if not current_recipients and zone_settings.get("email_to"):
+	current_recipients = [zone_settings.get("email_to")]
 
 min_c = float(zone_settings.get("temp_min_c", 18.0))
 max_c = float(zone_settings.get("temp_max_c", 28.0))
@@ -162,10 +166,16 @@ with st.form("temperature_alert_form"):
 		"Send email when alert triggers",
 		value=bool(zone_settings.get("email_enabled", False)),
 	)
-	email_to = st.text_input(
-		"Recipient email",
-		value=str(zone_settings.get("email_to", "")),
-		placeholder="name@example.com",
+	email_add_input = st.text_input(
+		"Add recipient email(s)",
+		value="",
+		placeholder="name@example.com or comma-separated list",
+	)
+	# Multi-select removal lets users prune existing recipients in one save.
+	emails_to_remove = st.multiselect(
+		"Remove recipient email(s)",
+		options=current_recipients,
+		default=[],
 	)
 	email_cooldown_minutes = st.number_input(
 		"Cooldown between repeated emails (minutes)",
@@ -183,6 +193,14 @@ if save:
 		temp_min_c = f_to_c(temp_min_input) if unit == "°F" else temp_min_input
 		temp_max_c = f_to_c(temp_max_input) if unit == "°F" else temp_max_input
 		# Humidity values are stored as percentages and do not require conversion.
+		# Apply removals first, then append newly entered recipients.
+		new_recipients = [e for e in current_recipients if e not in emails_to_remove]
+		if email_add_input.strip():
+			add_parts = [part.strip() for part in email_add_input.replace(";", ",").replace("\n", ",").split(",")]
+			for address in add_parts:
+				if address and address.lower() not in {x.lower() for x in new_recipients}:
+					new_recipients.append(address)
+
 		update_zone_alert(
 			zone=selected_zone,
 			enabled=alerts_enabled,
@@ -191,7 +209,7 @@ if save:
 			humidity_min_pct=humidity_min_input,
 			humidity_max_pct=humidity_max_input,
 			email_enabled=email_enabled,
-			email_to=email_to,
+			email_recipients=new_recipients,
 			email_cooldown_minutes=int(email_cooldown_minutes),
 		)
 		st.success(f"Saved alert settings for {zone_labels.get(selected_zone, selected_zone)}.")
@@ -221,8 +239,12 @@ st.info(
 )
 
 if active_settings.get("email_enabled", False):
+	active_recipients = active_settings.get("email_recipients") or []
+	if not active_recipients and active_settings.get("email_to"):
+		active_recipients = [active_settings.get("email_to")]
+	recipients_label = ", ".join(active_recipients) if active_recipients else "not set"
 	st.caption(
-		f"Email alerts: ON · recipient {active_settings.get('email_to') or 'not set'} · "
+		f"Email alerts: ON · recipients {recipients_label} · "
 		f"cooldown {int(active_settings.get('email_cooldown_minutes', 30))} min"
 	)
 else:

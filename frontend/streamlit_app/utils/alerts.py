@@ -16,6 +16,7 @@ DEFAULT_ZONE_ALERTS = {
         "humidity_max_pct": 80.0,
         "email_enabled": False,
         "email_to": "",
+        "email_recipients": [],
         "email_cooldown_minutes": 30,
     },
     "zone2": {
@@ -26,6 +27,7 @@ DEFAULT_ZONE_ALERTS = {
         "humidity_max_pct": 80.0,
         "email_enabled": False,
         "email_to": "",
+        "email_recipients": [],
         "email_cooldown_minutes": 30,
     },
 }
@@ -39,6 +41,31 @@ ALERT_STATE_FILE = DATA_DIR / "alert_email_state.json"
 
 def _normalize_zone(zone: str) -> str:
     return (zone or "").strip().lower()
+
+
+def _normalize_email_recipients(value) -> list[str]:
+    # Accept CSV/newline/list input and return a deduplicated recipient list.
+    if value is None:
+        return []
+
+    candidates = []
+    if isinstance(value, str):
+        text = value.replace(";", ",").replace("\n", ",")
+        candidates = [part.strip() for part in text.split(",")]
+    elif isinstance(value, list):
+        candidates = [str(part).strip() for part in value]
+    else:
+        candidates = [str(value).strip()]
+
+    seen = set()
+    cleaned = []
+    for email in candidates:
+        key = email.lower()
+        if not email or key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(email)
+    return cleaned
 
 
 def _build_settings(raw_settings: dict | None) -> dict:
@@ -61,6 +88,9 @@ def _build_settings(raw_settings: dict | None) -> dict:
             "humidity_max_pct": float(zone_values.get("humidity_max_pct", defaults["humidity_max_pct"])),
             "email_enabled": bool(zone_values.get("email_enabled", defaults["email_enabled"])),
             "email_to": str(zone_values.get("email_to", defaults["email_to"]))[:320].strip(),
+            "email_recipients": _normalize_email_recipients(
+                zone_values.get("email_recipients", zone_values.get("email_to", defaults["email_to"]))
+            ),
             "email_cooldown_minutes": int(zone_values.get("email_cooldown_minutes", defaults["email_cooldown_minutes"])),
         }
 
@@ -109,6 +139,8 @@ def get_zone_alert(zone: str) -> dict:
     zone_settings.setdefault("humidity_max_pct", zone_defaults["humidity_max_pct"])
     zone_settings.setdefault("email_enabled", zone_defaults["email_enabled"])
     zone_settings.setdefault("email_to", zone_defaults["email_to"])
+    # Keep legacy single-recipient data compatible with new recipient lists.
+    zone_settings.setdefault("email_recipients", _normalize_email_recipients(zone_settings.get("email_to", "")))
     zone_settings.setdefault("email_cooldown_minutes", zone_defaults["email_cooldown_minutes"])
     return zone_settings
 
@@ -122,6 +154,7 @@ def update_zone_alert(
     humidity_max_pct: float | None = None,
     email_enabled: bool | None = None,
     email_to: str | None = None,
+    email_recipients: list[str] | None = None,
     email_cooldown_minutes: int | None = None,
 ) -> None:
     # Temperature and humidity ranges are validated independently.
@@ -141,6 +174,16 @@ def update_zone_alert(
     if humidity_min >= humidity_max:
         raise ValueError("Minimum humidity must be lower than maximum humidity.")
 
+    if email_recipients is None:
+        # Reuse existing recipients when caller does not provide a new list.
+        recipients = _normalize_email_recipients(current.get("email_recipients", current.get("email_to", "")))
+    else:
+        recipients = _normalize_email_recipients(email_recipients)
+
+    if email_to is not None:
+        # Keep compatibility with older single-recipient input.
+        recipients = _normalize_email_recipients(recipients + _normalize_email_recipients(email_to))
+
     settings = get_alert_settings()
     settings[zone_key] = {
         "enabled": bool(enabled),
@@ -149,7 +192,9 @@ def update_zone_alert(
         "humidity_min_pct": humidity_min,
         "humidity_max_pct": humidity_max,
         "email_enabled": bool(current.get("email_enabled", False) if email_enabled is None else email_enabled),
-        "email_to": str(current.get("email_to", "") if email_to is None else email_to).strip(),
+        # Keep email_to in sync for legacy readers that still expect one address.
+        "email_to": (recipients[0] if recipients else ""),
+        "email_recipients": recipients,
         "email_cooldown_minutes": cooldown,
     }
     _persist_settings(settings)
