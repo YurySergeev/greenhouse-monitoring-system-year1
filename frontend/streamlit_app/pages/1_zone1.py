@@ -10,34 +10,20 @@ import plotly.express as px
 from utils.config import CITY
 from utils.styles import load_css
 from utils.weather import fetch_weather_data
-
+from utils.db import (
+    load_latest_reading,
+    load_history,
+    load_readings,
+    load_latest_sensor,
+    load_sensor_history,
+    load_sensor_readings,
+)
 from utils.layout import (
     render_zone_header,
     render_refresh_update,
     render_metrics_row,
     render_section_header,
     render_zone1_top_controls,
-)
-
-
-#from utils.fetchingWFlask import (
-#    fetch_latest,
-#    fetch_history,
-#    fetch_readings,
-#    fetch_latest_sensor,
-#    fetch_sensor_history,
-#    fetch_sensor_readings
-##)
-
-
-#Use direct DB connection
-from utils.db import (
-    load_latest_reading as fetch_latest,
-    load_history as fetch_history,
-    load_readings as fetch_readings,
-    load_latest_sensor as fetch_latest_sensor,
-    load_sensor_history as fetch_sensor_history,
-    load_sensor_readings as fetch_sensor_readings
 )
 from utils.sidebar import render_sidebar
 
@@ -56,9 +42,8 @@ section, unit = render_zone1_top_controls()
 # ── Data sources ───────────────────────────────────────────────────────────────
 # Priority: Pico W (inside greenhouse) > OpenWeather mongo > live API fallback
 
-# using api layer (flask endpoints) as opposed to accessing db directly
-pico_latest  = fetch_latest_sensor()
-mongo_latest = fetch_latest()
+pico_latest  = load_latest_sensor(zone="zone1", area="upper_plants")
+mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="openweather")
 api_temp, api_humidity, api_desc, _ = fetch_weather_data()
 
 temp     = api_temp
@@ -146,8 +131,10 @@ with col_date:
             end_time = end_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
             hours = None # Turn off the "hours" fallback
 
-sensor_df = fetch_sensor_history()
-weather_df = fetch_history()
+# --- PASS THE NEW FILTERS INTO THE DATABASE ---
+sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=hours, start_ts=start_time, end_ts=end_time)
+weather_df = load_history(zone="zone1", area="upper_plants", source="openweather", hours=hours, start_ts=start_time, end_ts=end_time)
+
 
 if not sensor_df.empty:
     chart_df     = sensor_df.rename(columns={"temperature_c": "temp_c", "humidity_rh": "humidity_pct"})
@@ -251,9 +238,9 @@ show_latest_only = st.toggle("Show latest reading only", value=True)
 limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, value=20, step=1)
 
 if data_source_toggle == "Pico W sensor":
-    docs = fetch_sensor_readings()
+    docs = load_sensor_readings(zone="zone1", area="upper_plants", limit=limit)
 else:
-    docs = fetch_readings()
+    docs = load_readings(zone="zone1", area="upper_plants", source="openweather", limit=limit)
 
 table_df = pd.DataFrame(docs)
 if table_df.empty:

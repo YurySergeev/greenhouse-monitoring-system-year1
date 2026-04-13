@@ -9,9 +9,6 @@ python-dotenv
 flask
 streamlit
 pymongo
-pytest
-schedule
-datetime
 
 # --- Database & Security ---
 pymongo
