@@ -2,7 +2,6 @@
 flask
 streamlit
 streamlit-autorefresh
-matplotlib
 
 #----- backend
 requests
@@ -19,10 +18,6 @@ pymongo
 dnspython
 certifi
 pymongo[srv]
-requests
-pymongo
-schedule
-dotenv
 
 # --- Data Engineering & Visualization ---
 pandas
