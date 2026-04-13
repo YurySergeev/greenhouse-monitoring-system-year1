@@ -10,6 +10,8 @@ import plotly.express as px
 from utils.config import CITY
 from utils.styles import load_css
 from utils.weather import fetch_weather_data
+
+
 from utils.db import (
     load_latest_reading,
     load_history,
@@ -18,6 +20,8 @@ from utils.db import (
     load_sensor_history,
     load_sensor_readings,
 )
+
+
 from utils.layout import (
     render_zone_header,
     render_refresh_update,
@@ -141,7 +145,7 @@ section, unit = render_zone1_top_controls()
 # Priority: Pico W (inside greenhouse) > OpenWeather mongo > live API fallback
 
 pico_latest  = load_latest_sensor(zone="zone1", area="upper_plants")
-mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="openweather")
+mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="zone1_dht22_test")
 api_temp, api_humidity, api_desc, _ = fetch_weather_data()
 
 temp     = api_temp
