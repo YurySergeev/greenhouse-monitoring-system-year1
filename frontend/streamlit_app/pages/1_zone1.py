@@ -18,13 +18,26 @@ from utils.layout import (
     render_section_header,
     render_zone1_top_controls,
 )
-from utils.fetchingWFlask import (
-    fetch_latest,
-    fetch_history,
-    fetch_readings,
-    fetch_latest_sensor,
-    fetch_sensor_history,
-    fetch_sensor_readings
+
+
+#from utils.fetchingWFlask import (
+#    fetch_latest,
+#    fetch_history,
+#    fetch_readings,
+#    fetch_latest_sensor,
+#    fetch_sensor_history,
+#    fetch_sensor_readings
+##)
+
+
+#Use direct DB connection
+from utils.db import (
+    load_latest_reading as fetch_latest,
+    load_history as fetch_history,
+    load_readings as fetch_readings,
+    load_latest_sensor as fetch_latest_sensor,
+    load_sensor_history as fetch_sensor_history,
+    load_sensor_readings as fetch_sensor_readings
 )
 from utils.sidebar import render_sidebar
 
