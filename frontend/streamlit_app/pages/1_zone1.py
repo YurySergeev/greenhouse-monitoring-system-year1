@@ -64,73 +64,7 @@ if True:
     subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
 
     # Set theme variables
-    st.markdown(f"""
-    <style>
-    :root {{
-        --background-color: {background_color};
-        --sidebar-color: {sidebar_color};
-        --title-color: {title_color};
-        --boxes-color: {boxes_color};
-        --top-bar-color: {top_bar_color};
-        --text-color: {text_color};
-        --subtitle-color: {subtitle_color};
-        --secondary-background-color: {boxes_color};
-        --title-text-color: {title_text_color};
-        --caption-color: {caption_color};
-        --zone-text-color: {zone_text_color};
-    }}
     
-    /* Zone 1 text color overrides - universal */
-    /* Apply white text to ALL elements on the page */
-    * {{
-        color: {zone_text_color} !important;
-    }}
-    
-    /* Specifically target markdown and text content */
-    [data-testid="stMarkdown"] {{
-        color: {zone_text_color} !important;
-    }}
-    
-    [data-testid="stCaption"] {{
-        color: {zone_text_color} !important;
-    }}
-    
-    [data-testid="stCaption"] * {{
-        color: {zone_text_color} !important;
-    }}
-    
-    [data-testid="stCaption"] p,
-    [data-testid="stCaption"] span,
-    [data-testid="stCaption"] small {{
-        color: {zone_text_color} !important;
-    }}
-    
-    /* Force white on all text elements - override inline styles */
-    [style*="color"] {{
-        color: {zone_text_color} !important;
-    }}
-    
-    /* Force white on small text and captions */
-    small {{
-        color: {zone_text_color} !important;
-    }}
-    
-    /* Target elements by their tag names more aggressively */
-    p {{
-        color: {zone_text_color} !important;
-    }}
-    
-    span {{
-        color: {zone_text_color} !important;
-    }}
-    
-    /* Override any specific page classes */
-    .page-title,
-    .page-subtitle {{
-        color: {zone_text_color} !important;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
     
     # Store theme color in session state for layout functions
     st.session_state["zone_text_color"] = zone_text_color
