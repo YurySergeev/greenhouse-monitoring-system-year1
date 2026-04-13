@@ -1,24 +1,207 @@
-/* Bigger RADIO label ("Temperature Unit") */
-div[data-testid="stRadio"] label p {
-  font-size: 24px !important;
-  font-weight: 700 !important;
+/* ── Hide auto-generated second sidebar nav item ── */
+[data-testid="stSidebarNav"] ul li:nth-child(2) {
+    display: none;
 }
 
-/* Bigger RADIO options (°C, °F) */
-div[data-testid="stRadio"] div[role="radiogroup"] label span,
-div[data-testid="stRadio"] div[role="radiogroup"] label p {
-  font-size: 28px !important;
-  font-weight: 700 !important;
+/* ── Page background ── */
+.stApp {
+    background-color: var(--background-color);
 }
 
-/* More spacing between options */
-div[data-testid="stRadio"] div[role="radiogroup"] {
-  gap: 24px !important;
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background-color: var(--secondary-background-color) !important;
+    border-right: 1px solid rgba(128, 128, 128, 0.15) !important;
 }
 
-/* Improve bordered containers */
-div[data-testid="stVerticalBlock"] > div:has(> h4) {
-    background: rgba(255,255,255,0.02);
-    border-radius: 16px;
-    padding: 20px;
+/* ── Section label (small caps above groups) ── */
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.45;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 10px;
+    margin-top: 28px;
+}
+
+/* ── Page header ── */
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.page-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-color);
+    opacity: 0.55;
+    margin: 3px 0 0 0;
+}
+
+/* ── Live badge — rgba works in both light and dark modes ── */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #10B981;
+    background: rgba(16, 185, 129, 0.15);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.live-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+}
+
+/* ── Metric cards ── */
+.metric-card {
+    background: var(--secondary-background-color);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    border-radius: 12px;
+    padding: 16px 18px 14px;
+    transition: border-color 0.15s ease;
+}
+
+.metric-card:hover {
+    border-color: rgba(128, 128, 128, 0.4);
+}
+
+/* ── Icon chips — rgba so transparent in both modes ── */
+.metric-icon-chip {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+.chip-green { background: rgba(16, 185, 129, 0.15); }
+.chip-blue  { background: rgba(59, 130, 246, 0.15);  }
+.chip-amber { background: rgba(245, 158, 11, 0.15);  }
+.chip-gray  { background: rgba(128, 128, 128, 0.12); }
+
+/* ── Metric text ── */
+.metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.1;
+}
+
+.metric-unit {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-color);
+    opacity: 0.5;
+    margin-left: 2px;
+}
+
+.metric-trend {
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.45;
+    margin-top: 5px;
+}
+
+/* Override opacity for colored trends */
+.trend-up   { color: #059669 !important; opacity: 1 !important; }
+.trend-warn { color: #DC2626 !important; opacity: 1 !important; }
+
+/* ── Buttons ── */
+.stApp .stButton > button {
+    background: var(--secondary-background-color);
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 6px 14px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stApp .stButton > button:hover {
+    border-color: rgba(128, 128, 128, 0.5);
+}
+
+/* ── Radio ── */
+.stApp div[data-testid="stRadio"] label p {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.stApp div[data-testid="stRadio"] div[role="radiogroup"] {
+    gap: 10px;
+}
+
+/* ── Divider ── */
+.stApp hr {
+    border: none;
+    border-top: 1px solid rgba(128, 128, 128, 0.2);
+    margin: 16px 0;
+}
+
+/* ── Section header ── */
+.section-title-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 32px 0 6px 0;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.section-divider {
+    width: 32px;
+    height: 3px;
+    background: #10B981;
+    border-radius: 2px;
+    margin: 0 0 20px 0;
+}
+
+/* ── Bordered containers (controls / alerts) ── */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid rgba(128, 128, 128, 0.2) !important;
+    border-radius: 12px !important;
+    background: var(--secondary-background-color) !important;
+}
+
+/* ── Caption ── */
+[data-testid="stCaptionContainer"] p {
+    font-size: 11px !important;
+    color: var(--text-color) !important;
+    opacity: 0.45 !important;
 }
