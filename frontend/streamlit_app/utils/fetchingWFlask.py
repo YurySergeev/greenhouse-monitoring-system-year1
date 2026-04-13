@@ -1,8 +1,8 @@
 import requests
 import pandas as pd
+import os
 
-FLASK_BASE_URL = "http://localhost:5000"
-
+FLASK_BASE_URL = os.getenv("FLASK_BASE_URL", "http://localhost:5000")
 # non-sensor fetching
 
 def fetch_latest():

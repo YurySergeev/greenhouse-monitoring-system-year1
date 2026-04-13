@@ -9,6 +9,8 @@ import certifi
 
 load_dotenv()
 
+FLASK_BASE_URL = os.getenv("FLASK_BASE_URL", "http://localhost:5000")
+
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME", "greenhouse_db")
 
