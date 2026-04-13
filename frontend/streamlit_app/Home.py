@@ -42,23 +42,7 @@ def _resolve_color(value):
 subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
 
 # Set theme variables
-st.markdown(f"""
-<style>
-:root {{
-    --background-color: {background_color};
-    --sidebar-color: {sidebar_color};
-    --title-color: {title_color};
-    --boxes-color: {boxes_color};
-    --top-bar-color: {top_bar_color};
-    --text-color: {text_color};
-    --subtitle-color: {subtitle_color};
-    --secondary-background-color: {boxes_color};
-    --title-text-color: {title_text_color};
-    --caption-color: {caption_color};
-    --zone-text-color: {zone_text_color};
-}}
-</style>
-""", unsafe_allow_html=True)
+
 
 # ── Shared sidebar ─────────────────────────────────────────────────────────────
 from utils.sidebar import render_sidebar
