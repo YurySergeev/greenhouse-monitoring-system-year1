@@ -34,7 +34,7 @@ load_css()  # ← must be here, right after set_page_config
 render_sidebar()
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-render_zone_header("Zone 1")
+render_zone_header("Zone 1 ABSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBSBBSSBBSBSBSBSBSBSBBSBSBSBBSBSBBSBSBBSBSBSBSb")
 render_refresh_update()
 
 section, unit = render_zone1_top_controls()
