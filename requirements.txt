@@ -1,0 +1,32 @@
+# --- Web Framework & UI ---
+flask
+streamlit
+streamlit-autorefresh
+
+#----- backend
+requests
+python-dotenv
+flask
+streamlit
+pymongo
+
+# --- Database & Security ---
+pymongo
+dnspython
+certifi
+pymongo[srv]
+
+# --- Data Engineering & Visualization ---
+pandas
+numpy
+plotly
+
+# --- Networking & API ---
+requests
+requests-cache
+retry-requests
+openmeteo-requests
+tenacity
+
+# --- Environment Management ---
+python-dotenv
