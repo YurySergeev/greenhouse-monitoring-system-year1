@@ -1,5 +1,7 @@
-import streamlit as st
+﻿import streamlit as st
 from pathlib import Path
+import matplotlib.colors as plt
+import base64
 
 st.set_page_config(page_title="Greenhouse — Kent State", layout="wide", page_icon="🌱")
 
@@ -13,6 +15,35 @@ css_path = BASE_DIR / "assets" / "style.css"
 if css_path.exists():
     st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
+from utils.themes import THEMES
+
+# Initialize session state for theme
+if "theme" not in st.session_state:
+    st.session_state.theme = "Feeling Green"
+
+# Get current theme colors
+current_theme = THEMES[st.session_state.theme]
+background_color = plt.XKCD_COLORS[current_theme["background"]]
+sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
+title_color = plt.XKCD_COLORS[current_theme["title"]]
+boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
+top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
+text_color = current_theme["text_color"]
+title_text_color = current_theme.get("title_text_color", text_color)
+caption_color = current_theme.get("caption_color", text_color)
+zone_text_color = current_theme.get("zone_text_color", text_color)
+
+# helper to resolve color
+def _resolve_color(value):
+    if isinstance(value, str) and value.startswith("xkcd:"):
+        return plt.XKCD_COLORS[value]
+    return value
+
+subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
+
+# Set theme variables
+
+
 # ── Shared sidebar ─────────────────────────────────────────────────────────────
 from utils.sidebar import render_sidebar
 render_sidebar()
@@ -20,10 +51,10 @@ render_sidebar()
 # ── Page title ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <div style="margin-bottom:32px;">
-    <p style="font-size:24px;font-weight:600;color:var(--text-color);margin:0;">
+    <p style="font-size:24px;font-weight:600;color:var(--title-text-color);margin:0;">
         Kent State Greenhouse
     </p>
-    <p style="font-size:14px;color:var(--text-color);opacity:0.55;margin:4px 0 0 0;">
+    <p style="font-size:14px;color:var(--title-text-color);opacity:0.55;margin:4px 0 0 0;">
         Environmental monitoring system
     </p>
 </div>
@@ -76,8 +107,12 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
-# ── Greenhouse image ───────────────────────────────────────────────────────────
+# ── Greenhouse image ─────────────────────────────────────────────────────────────────
 st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 if IMG_PATH.exists():
-    st.image(str(IMG_PATH), use_container_width=True,
-             caption="Kent State University greenhouse facility")
+    st.markdown(f"""
+    <div style="text-align: center;">
+        <img src="data:image/png;base64,{base64.b64encode(IMG_PATH.read_bytes()).decode()}" style="width: 100%; max-width: 800px;" />
+        <p style="margin-top: 10px; color: var(--caption-color); font-size: 14px;">Kent State University greenhouse facility</p>
+    </div>
+    """, unsafe_allow_html=True)
