@@ -10,7 +10,7 @@
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
-    background-color: var(--sidebar-color) !important;
+    background-color: var(--secondary-background-color) !important;
     border-right: 1px solid rgba(128, 128, 128, 0.15) !important;
 }
 
@@ -97,68 +97,6 @@
 .chip-blue  { background: rgba(59, 130, 246, 0.15);  }
 .chip-amber { background: rgba(245, 158, 11, 0.15);  }
 .chip-gray  { background: rgba(128, 128, 128, 0.12); }
-
-/* ── Theme-specific styles ── */
-.ksuTitle {
-    padding: 26px 26px 20px 286px;
-    border-radius: 18px;
-    background: var(--title-color);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.ksuTitle h1 {
-    margin: 0;
-    font-size: 40px;
-    line-height: 1.05;
-    color: var(--text-color);
-}
-
-.box {
-    padding: 18px;
-    border-radius: 16px;
-    background: var(--boxes-color);
-    border: 1px solid rgba(255,255,255,0.08);
-    text-align: center;
-}
-
-.box h3 {
-    margin: 0 0 10px 0;
-    font-size: 25px;
-}
-
-.list {
-    opacity: 0.75;
-    font-size: 13px;
-    margin-bottom: 10px;
-}
-
-.metrics {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-    justify-content: center;
-}
-
-.metric {
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    font-size: 12px;
-    font-weight: 500;
-}
-
-hr {
-    opacity: 0.15;
-}
-
-/* Top bar */
-[data-testid="stHeader"] {
-    background-color: var(--top-bar-color);
-}
 
 /* ── Metric text ── */
 .metric-label {

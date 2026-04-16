@@ -10,8 +10,6 @@ import plotly.express as px
 from utils.config import CITY
 from utils.styles import load_css
 from utils.weather import fetch_weather_data
-
-
 from utils.db import (
     load_latest_reading,
     load_history,
@@ -20,8 +18,6 @@ from utils.db import (
     load_sensor_history,
     load_sensor_readings,
 )
-
-
 from utils.layout import (
     render_zone_header,
     render_refresh_update,
@@ -30,44 +26,10 @@ from utils.layout import (
     render_zone1_top_controls,
 )
 from utils.sidebar import render_sidebar
-from utils.alerts import get_zone_alert, evaluate_temperature_alert, evaluate_humidity_alert, mark_email_alert_sent, should_send_email_alert
-from utils.emailer import send_temperature_alert_email, send_humidity_alert_email
 
 # ── Page config THEN CSS — must happen before any other st calls ───────────────
 st.set_page_config(page_title="Zone 1", layout="wide")
 load_css()  # ← must be here, right after set_page_config
-
-# ── Apply current theme ────────────────────────────────────────────────────────
-if "theme" not in st.session_state:
-    st.session_state.theme = "Feeling Green"
-
-if True:
-    from utils.themes import THEMES
-    import matplotlib.colors as plt
-    current_theme = THEMES[st.session_state.theme]
-    background_color = plt.XKCD_COLORS[current_theme["background"]]
-    sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
-    title_color = plt.XKCD_COLORS[current_theme["title"]]
-    boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
-    top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
-    text_color = current_theme["text_color"]
-    title_text_color = current_theme.get("title_text_color", text_color)
-    caption_color = current_theme.get("caption_color", text_color)
-    zone_text_color = current_theme.get("zone_text_color", text_color)
-
-    # helper to resolve color
-    def _resolve_color(value):
-        if isinstance(value, str) and value.startswith("xkcd:"):
-            return plt.XKCD_COLORS[value]
-        return value
-
-    subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
-
-    # Set theme variables
-    
-    
-    # Store theme color in session state for layout functions
-    st.session_state["zone_text_color"] = zone_text_color
 
 render_sidebar()
 
@@ -81,7 +43,7 @@ section, unit = render_zone1_top_controls()
 # Priority: Pico W (inside greenhouse) > OpenWeather mongo > live API fallback
 
 pico_latest  = load_latest_sensor(zone="zone1", area="upper_plants")
-mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="zone1_dht22_test")
+mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="openweather")
 api_temp, api_humidity, api_desc, _ = fetch_weather_data()
 
 temp     = api_temp
@@ -106,142 +68,6 @@ if pico_latest:
     else:
         ts_str = "unknown"
     st.caption(f"🟢 Sensor data — Pico W · last reading at {ts_str}")
-
-# ── Temperature alerts ────────────────────────────────────────────────────────
-zone_alert_settings = get_zone_alert("zone1")
-temp_alert = evaluate_temperature_alert(temp, zone="zone1")
-humidity_alert = evaluate_humidity_alert(humidity, zone="zone1")
-# Use recipient list with fallback to legacy single-recipient key.
-email_recipients = zone_alert_settings.get("email_recipients") or []
-if not email_recipients and zone_alert_settings.get("email_to"):
-    email_recipients = [zone_alert_settings.get("email_to")]
-# Collect one or more outbound email results for user visibility.
-email_status_msgs = []
-
-# Convert persisted Celsius thresholds for display to match the selected unit.
-if unit == "°F":
-    threshold_min_display = zone_alert_settings["temp_min_c"] * 9.0 / 5.0 + 32.0
-    threshold_max_display = zone_alert_settings["temp_max_c"] * 9.0 / 5.0 + 32.0
-else:
-    threshold_min_display = zone_alert_settings["temp_min_c"]
-    threshold_max_display = zone_alert_settings["temp_max_c"]
-
-if temp is None:
-    st.warning("Temperature alert status unavailable because no current temperature reading was found.")
-elif not zone_alert_settings.get("enabled", True):
-    st.info("Temperature alerts are currently disabled for Zone 1. Enable them in Settings.")
-elif temp_alert and temp_alert["kind"] == "low":
-    # Alert values are stored/evaluated in Celsius and converted only for UI output.
-    alert_temp_display = temp_alert["temp_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["temp_c"]
-    alert_threshold_display = temp_alert["threshold_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["threshold_c"]
-    st.error(
-        f"Low temperature alert: {alert_temp_display:.1f} {unit} is below "
-        f"the minimum threshold ({alert_threshold_display:.1f} {unit})."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        # Cooldown is metric-specific so humidity emails do not block temperature emails.
-        if should_send_email_alert("zone1", "low", cooldown_minutes=cooldown, metric="temperature"):
-            sent_any = False
-            # Send to each configured recipient and aggregate per-address status.
-            for recipient in email_recipients:
-                ok, msg = send_temperature_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="low",
-                    temp_c=float(temp_alert["temp_c"]),
-                    threshold_c=float(temp_alert["threshold_c"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "low", metric="temperature")
-elif temp_alert and temp_alert["kind"] == "high":
-    alert_temp_display = temp_alert["temp_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["temp_c"]
-    alert_threshold_display = temp_alert["threshold_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["threshold_c"]
-    st.error(
-        f"High temperature alert: {alert_temp_display:.1f} {unit} exceeds "
-        f"the maximum threshold ({alert_threshold_display:.1f} {unit})."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        if should_send_email_alert("zone1", "high", cooldown_minutes=cooldown, metric="temperature"):
-            sent_any = False
-            for recipient in email_recipients:
-                ok, msg = send_temperature_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="high",
-                    temp_c=float(temp_alert["temp_c"]),
-                    threshold_c=float(temp_alert["threshold_c"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "high", metric="temperature")
-else:
-    st.success(
-        f"Temperature is within range ({threshold_min_display:.1f} to "
-        f"{threshold_max_display:.1f} {unit})."
-    )
-
-# ── Humidity alerts ───────────────────────────────────────────────────────────
-humidity_min = float(zone_alert_settings.get("humidity_min_pct", 45.0))
-humidity_max = float(zone_alert_settings.get("humidity_max_pct", 80.0))
-
-if humidity is None:
-    st.warning("Humidity alert status unavailable because no current humidity reading was found.")
-elif not zone_alert_settings.get("enabled", True):
-    st.info("Humidity alerts are currently disabled for Zone 1. Enable them in Settings.")
-elif humidity_alert and humidity_alert["kind"] == "low":
-    st.error(
-        f"Low humidity alert: {humidity_alert['humidity_pct']:.0f}% is below "
-        f"the minimum threshold ({humidity_alert['threshold_pct']:.0f}%)."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        if should_send_email_alert("zone1", "low", cooldown_minutes=cooldown, metric="humidity"):
-            sent_any = False
-            # Send to each configured recipient and aggregate per-address status.
-            for recipient in email_recipients:
-                ok, msg = send_humidity_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="low",
-                    humidity_pct=float(humidity_alert["humidity_pct"]),
-                    threshold_pct=float(humidity_alert["threshold_pct"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "low", metric="humidity")
-elif humidity_alert and humidity_alert["kind"] == "high":
-    st.error(
-        f"High humidity alert: {humidity_alert['humidity_pct']:.0f}% exceeds "
-        f"the maximum threshold ({humidity_alert['threshold_pct']:.0f}%)."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        if should_send_email_alert("zone1", "high", cooldown_minutes=cooldown, metric="humidity"):
-            sent_any = False
-            for recipient in email_recipients:
-                ok, msg = send_humidity_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="high",
-                    humidity_pct=float(humidity_alert["humidity_pct"]),
-                    threshold_pct=float(humidity_alert["threshold_pct"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "high", metric="humidity")
-else:
-    st.success(f"Humidity is within range ({humidity_min:.0f}% to {humidity_max:.0f}%).")
-
-for msg in email_status_msgs:
-    # Show send outcomes (success/failure) directly below alerts.
-    st.caption(msg)
 
 # ── Metric cards ───────────────────────────────────────────────────────────────
 render_metrics_row(temp, humidity, weather, temp_unit=unit)
@@ -307,7 +133,7 @@ with col_date:
 
 # --- PASS THE NEW FILTERS INTO THE DATABASE ---
 sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=hours, start_ts=start_time, end_ts=end_time)
-weather_df = load_history(zone="zone1", area="upper_plants", source="zone1_dht22_test", hours=hours, start_ts=start_time, end_ts=end_time)
+weather_df = load_history(zone="zone1", area="upper_plants", source="openweather", hours=hours, start_ts=start_time, end_ts=end_time)
 
 
 if not sensor_df.empty:
@@ -414,7 +240,7 @@ limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, 
 if data_source_toggle == "Pico W sensor":
     docs = load_sensor_readings(zone="zone1", area="upper_plants", limit=limit)
 else:
-    docs = load_readings(zone="zone1", area="upper_plants", source="zone1_dht22_test", limit=limit)
+    docs = load_readings(zone="zone1", area="upper_plants", source="openweather", limit=limit)
 
 table_df = pd.DataFrame(docs)
 if table_df.empty:

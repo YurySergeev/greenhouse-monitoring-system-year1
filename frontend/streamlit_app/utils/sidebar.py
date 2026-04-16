@@ -1,6 +1,5 @@
 from pathlib import Path
 import streamlit as st
-from .themes import THEMES
 
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 LOGO_PATH  = ASSETS_DIR / "logo3.png"
@@ -30,14 +29,5 @@ def render_sidebar():
         st.markdown('<p class="section-label">System</p>', unsafe_allow_html=True)
         if st.button("Settings", use_container_width=True):
             st.switch_page("pages/settings.py")
-
-        # Theme selector
-        if st.button("🌿 Change Theme", key="theme_button", help="Cycle through themes", use_container_width=True):
-            # Cycle through themes
-            themes_list = list(THEMES.keys())
-            current_index = themes_list.index(st.session_state.theme)
-            next_index = (current_index + 1) % len(themes_list)
-            st.session_state.theme = themes_list[next_index]
-            st.rerun()
 
         st.caption("System online · All sensors nominal")
