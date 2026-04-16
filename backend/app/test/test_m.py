@@ -3,7 +3,9 @@ from app.server import create_app, get_collection
 from unittest.mock import MagicMock, patch
 
 
-
+# -----------------------------
+# BASIC ROUTE TESTS
+# -----------------------------
 
 def test_api_test_route():
     app = create_app()
@@ -32,7 +34,9 @@ def test_db_connection():
     assert collection is not None
 
 
-
+# -----------------------------
+# VALIDATION TESTS
+# -----------------------------
 
 def test_post_sensor_data_missing_fields():
     app = create_app()
@@ -59,7 +63,9 @@ def test_post_sensor_data_invalid_json():
     assert response.status_code == 400
 
 
-
+# -----------------------------
+# GET ROUTE TESTS
+# -----------------------------
 
 def test_get_sensor_data():
     app = create_app()
@@ -89,6 +95,9 @@ def test_get_sensor_data_not_found():
     assert response.status_code == 404
 
 
+# -----------------------------
+# MOCKED DATABASE TESTS
+# -----------------------------
 
 def test_post_sensor_data_db_insert_mocked():
     app = create_app()
