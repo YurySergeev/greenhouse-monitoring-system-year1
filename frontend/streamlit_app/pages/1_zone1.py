@@ -5,22 +5,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 
-from utils.config import CITY
 from utils.styles import load_css
-from utils.weather import fetch_weather_data
-
 
 from utils.db import (
-    load_latest_reading,
+    load_latest,
     load_history,
     load_readings,
-    load_latest_sensor,
-    load_sensor_history,
-    load_sensor_readings,
 )
-
+from utils.zone_config import ZONE1_AREAS, get_area
 
 from utils.layout import (
     render_zone_header,
@@ -35,39 +28,20 @@ from utils.emailer import send_temperature_alert_email, send_humidity_alert_emai
 
 # ── Page config THEN CSS — must happen before any other st calls ───────────────
 st.set_page_config(page_title="Zone 1", layout="wide")
-load_css()  # ← must be here, right after set_page_config
+load_css()
 
 # ── Apply current theme ────────────────────────────────────────────────────────
+# Only zone_text_color is consumed by downstream layout helpers via session_state;
+# other theme variables are resolved inside the CSS/layout modules.
 if "theme" not in st.session_state:
     st.session_state.theme = "Feeling Green"
 
-if True:
-    from utils.themes import THEMES
-    import matplotlib.colors as plt
-    current_theme = THEMES[st.session_state.theme]
-    background_color = plt.XKCD_COLORS[current_theme["background"]]
-    sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
-    title_color = plt.XKCD_COLORS[current_theme["title"]]
-    boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
-    top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
-    text_color = current_theme["text_color"]
-    title_text_color = current_theme.get("title_text_color", text_color)
-    caption_color = current_theme.get("caption_color", text_color)
-    zone_text_color = current_theme.get("zone_text_color", text_color)
-
-    # helper to resolve color
-    def _resolve_color(value):
-        if isinstance(value, str) and value.startswith("xkcd:"):
-            return plt.XKCD_COLORS[value]
-        return value
-
-    subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
-
-    # Set theme variables
-    
-    
-    # Store theme color in session state for layout functions
-    st.session_state["zone_text_color"] = zone_text_color
+from utils.themes import THEMES
+import matplotlib.colors as plt
+current_theme = THEMES[st.session_state.theme]
+text_color = current_theme["text_color"]
+zone_text_color = current_theme.get("zone_text_color", text_color)
+st.session_state["zone_text_color"] = zone_text_color
 
 render_sidebar()
 
@@ -77,37 +51,51 @@ render_refresh_update()
 
 section, unit = render_zone1_top_controls()
 
-# ── Data sources ───────────────────────────────────────────────────────────────
-# Priority: Pico W (inside greenhouse) > OpenWeather mongo > live API fallback
+# ── Area selector (one button per collection in ZONE1_AREAS) ──────────────────
+if "zone1_area_key" not in st.session_state:
+    st.session_state["zone1_area_key"] = ZONE1_AREAS[0]["key"]
 
-pico_latest  = load_latest_sensor(zone="zone1", area="upper_plants")
-mongo_latest = load_latest_reading(zone="zone1", area="upper_plants", source="zone1_dht22_test")
-api_temp, api_humidity, api_desc, _ = fetch_weather_data()
+render_section_header("Area")
+area_cols = st.columns(len(ZONE1_AREAS))
+for col, area in zip(area_cols, ZONE1_AREAS):
+    is_selected = st.session_state["zone1_area_key"] == area["key"]
+    with col:
+        if st.button(
+            area["label"],
+            key=f"area_btn_{area['key']}",
+            use_container_width=True,
+            type="primary" if is_selected else "secondary",
+        ):
+            st.session_state["zone1_area_key"] = area["key"]
+            st.rerun()
 
-temp     = api_temp
-humidity = api_humidity
-weather  = api_desc
+active_area = get_area(ZONE1_AREAS, st.session_state["zone1_area_key"])
+active_collection = active_area["collection"]
+active_schema     = active_area["schema"]
 
-if mongo_latest:
-    if mongo_latest.get("temp_c")       is not None: temp     = mongo_latest["temp_c"]
-    if mongo_latest.get("humidity_pct") is not None: humidity = mongo_latest["humidity_pct"]
-    if mongo_latest.get("weather_desc") is not None: weather  = mongo_latest["weather_desc"]
+# ── Data load (single source, driven by active area) ──────────────────────────
+latest = load_latest(active_collection, active_schema)
 
-if pico_latest:
-    if pico_latest.get("temperature_c") is not None: temp     = pico_latest["temperature_c"]
-    if pico_latest.get("humidity_rh")   is not None: humidity = pico_latest["humidity_rh"]
+temp     = latest.get("temp_c")       if latest else None
+humidity = latest.get("humidity_pct") if latest else None
+weather  = latest.get("weather_desc") if latest else None
 
-# Source indicator
-if pico_latest:
-    pico_ts = pico_latest.get("ts")
-    # Convert UTC to US/Eastern
-    if pico_ts:
-        ts_str = pd.to_datetime(pico_ts).tz_localize('UTC').tz_convert('US/Eastern').strftime("%I:%M:%S %p")
-    else:
-        ts_str = "unknown"
-    st.caption(f"🟢 Sensor data — Pico W · last reading at {ts_str}")
+# Timestamp indicator
+if latest and latest.get("ts"):
+    ts_str = (
+        pd.to_datetime(latest["ts"])
+          .tz_localize("UTC")
+          .tz_convert("US/Eastern")
+          .strftime("%I:%M:%S %p")
+    )
+    st.caption(f"🟢 {active_area['label']} — last reading at {ts_str}")
+else:
+    st.caption(f"⚪ {active_area['label']} — no readings found")
 
 # ── Temperature alerts ────────────────────────────────────────────────────────
+# TODO: alert logic still keyed on "zone1" and will evaluate whichever area
+# button is currently selected against indoor thresholds. Alert rework will
+# replace this with per-area evaluation.
 zone_alert_settings = get_zone_alert("zone1")
 temp_alert = evaluate_temperature_alert(temp, zone="zone1")
 humidity_alert = evaluate_humidity_alert(humidity, zone="zone1")
@@ -286,7 +274,7 @@ with col_date:
         # Custom Range: Date Picker
         today = pd.Timestamp.now('US/Eastern').date()
         date_range = st.date_input("Select Date Range", (today - pd.Timedelta(days=2), today))
-        
+
         # Only show time pickers IF they have successfully selected a start and end date
         if len(date_range) == 2:
             # Create two small columns for the time pickers
@@ -295,34 +283,29 @@ with col_date:
                 start_t = st.time_input("Start Time", value=pd.Timestamp('00:00:00').time())
             with t_col2:
                 end_t = st.time_input("End Time", value=pd.Timestamp('23:59:59').time())
-            
+
             # 1. Combine the selected Date + Time into a single Pandas datetime object
             start_combined = pd.to_datetime(f"{date_range[0]} {start_t}")
             end_combined = pd.to_datetime(f"{date_range[1]} {end_t}")
-            
+
             # 2. Assign the Eastern timezone, then convert to UTC for the database!
             start_time = start_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
             end_time = end_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
             hours = None # Turn off the "hours" fallback
 
-# --- PASS THE NEW FILTERS INTO THE DATABASE ---
-sensor_df  = load_sensor_history(zone="zone1", area="upper_plants", hours=hours, start_ts=start_time, end_ts=end_time)
-weather_df = load_history(zone="zone1", area="upper_plants", source="zone1_dht22_test", hours=hours, start_ts=start_time, end_ts=end_time)
-
-
-if not sensor_df.empty:
-    chart_df     = sensor_df.rename(columns={"temperature_c": "temp_c", "humidity_rh": "humidity_pct"})
-    chart_source = "Pico W sensor"
-elif not weather_df.empty:
-    chart_df     = weather_df
-    chart_source = "OpenWeather"
-else:
-    chart_df     = pd.DataFrame()
-    chart_source = None
+# --- Load history from the active collection only ---
+chart_df = load_history(
+    active_collection,
+    active_schema,
+    hours=hours,
+    start_ts=start_time,
+    end_ts=end_time,
+)
+chart_source = active_area["label"]
 
 if not chart_df.empty and "ts" in chart_df.columns:
     chart_df["ts"] = pd.to_datetime(chart_df["ts"]).dt.tz_localize('UTC').dt.tz_convert('US/Eastern')
-    
+
 c1, c2 = st.columns(2)
 
 with c1:
@@ -387,13 +370,13 @@ if not chart_df.empty and "temp_c" in chart_df.columns and "humidity_pct" in cha
         yaxis=dict(title="°C", showgrid=True, gridcolor="rgba(128,128,128,0.15)"),
         yaxis2=dict(title="%", overlaying="y", side="right", showgrid=False),
         hovermode="x unified",
-        
+
         # 1. Move legend below the x-axis, centered
         legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
-        
+
         # 2. Add 40px of bottom margin (b=40) so the legend doesn't get cut off
         margin=dict(l=0, r=0, t=50, b=40),
-        
+
         font=dict(size=11),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -403,18 +386,10 @@ else:
 # ── Data table ─────────────────────────────────────────────────────────────────
 render_section_header("Raw data")
 
-data_source_toggle = st.radio(
-    "Data source", ["Pico W sensor", "OpenWeather"],
-    horizontal=True, label_visibility="collapsed",
-)
-
 show_latest_only = st.toggle("Show latest reading only", value=True)
 limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, value=20, step=1)
 
-if data_source_toggle == "Pico W sensor":
-    docs = load_sensor_readings(zone="zone1", area="upper_plants", limit=limit)
-else:
-    docs = load_readings(zone="zone1", area="upper_plants", source="zone1_dht22_test", limit=limit)
+docs = load_readings(active_collection, active_schema, limit=limit)
 
 table_df = pd.DataFrame(docs)
 if table_df.empty:

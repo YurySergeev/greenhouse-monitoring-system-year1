@@ -5,8 +5,7 @@ from utils.themes import THEMES
 from utils.sidebar import render_sidebar
 from utils.styles import load_css
 from utils.alerts import get_zone_alert, update_zone_alert, evaluate_temperature_alert, evaluate_humidity_alert
-from utils.db import load_latest_reading, load_latest_sensor
-from utils.weather import fetch_weather_data
+from utils.db import load_latest
 from utils.emailer import is_email_configured
 
 
@@ -95,25 +94,17 @@ else:
 	default_max = round(max_c, 1)
 	input_min, input_max = -10.0, 60.0
 
-# Build a live snapshot in the same priority order as Zone 1.
-pico_latest = load_latest_sensor(zone=selected_zone, area="upper_plants")
-mongo_latest = load_latest_reading(zone=selected_zone, area="upper_plants", source="openweather")
-api_temp, api_humidity, _, _ = fetch_weather_data()
+# Build a live snapshot for the alert preview card.
+# TODO: alert rework — currently reads the first indoor area for zone1 as a
+# representative reading; replace with per-area alert evaluation later.
+if selected_zone == "zone1":
+	preview_collection, preview_schema = "zone1-upper", "pico"
+else:
+	preview_collection, preview_schema = "outside_weather_data", "weather"
 
-live_temp = api_temp
-live_humidity = api_humidity
-
-if mongo_latest:
-	if mongo_latest.get("temp_c") is not None:
-		live_temp = mongo_latest["temp_c"]
-	if mongo_latest.get("humidity_pct") is not None:
-		live_humidity = mongo_latest["humidity_pct"]
-
-if pico_latest:
-	if pico_latest.get("temperature_c") is not None:
-		live_temp = pico_latest["temperature_c"]
-	if pico_latest.get("humidity_rh") is not None:
-		live_humidity = pico_latest["humidity_rh"]
+preview_doc = load_latest(preview_collection, preview_schema)
+live_temp = preview_doc.get("temp_c") if preview_doc else None
+live_humidity = preview_doc.get("humidity_pct") if preview_doc else None
 
 # Reuse the same evaluation helpers used by runtime alerting on zone pages.
 temp_alert_preview = evaluate_temperature_alert(live_temp, zone=selected_zone)

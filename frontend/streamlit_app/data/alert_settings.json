@@ -6,11 +6,10 @@
     "humidity_min_pct": 45.0,
     "humidity_max_pct": 80.0,
     "email_enabled": true,
-    "email_to": "folusomololuwa@gmail.com",
+    "email_to": "holder@gmail.com",
     "email_recipients": [
-      "folusomololuwa@gmail.com",
-      "mfoluso@kent.edu",
-      "mololuwa@gmail.com"
+      "holder@gmail.com"
+      
     ],
     "email_cooldown_minutes": 30
   },

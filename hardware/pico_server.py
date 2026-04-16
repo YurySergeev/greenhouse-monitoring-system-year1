@@ -18,11 +18,13 @@ logging.getLogger("werkzeug").setLevel(logging.ERROR)
 # App + DB init
 # --------------------------------------------------
 
-app = Flask(__name__)
+
 
 MONGO_URI = os.getenv("MONGO_URI", "").strip()
 DB_NAME   = os.getenv("DB_NAME", "greenhouse_db").strip()
 
+
+app = Flask(__name__)
 # --------------------------------------------------
 # Node Registyr
 #
@@ -53,7 +55,9 @@ NODE_REGISTRY = {
 }
 try:
     client = MongoClient(MONGO_URI, tls=True, tlsCAFile=certifi.where())
+    
     client.admin.command("ping")
+    
     db = client[DB_NAME]
     _db_ok = True
 except Exception as e:
@@ -88,7 +92,7 @@ def _print_banner():
     print("├" + "─" * width + "┤")
     print("│" + f"  Registered nodes: {len(NODE_REGISTRY)}".ljust(width) + "│")
     for nid, cfg in NODE_REGISTRY.items():
-        line = f"     {nid}  →  {cfg['zone']} / {cfg['area']}"
+        line = f"     {nid}    {cfg['zone']} / {cfg['area']}"
         print("│" + line[:width].ljust(width) + "│")
  
     print("└" + "─" * width + "┘")
@@ -263,4 +267,7 @@ if __name__ == "__main__":
     # host='0.0.0.0' lets devices on the same Wi-Fi reach this server.
     # Change port if 5000 is taken.
     print("[Server] Starting on 0.0.0.0:5000 ...")
+    
+    _print_banner()
+    
     app.run(host="0.0.0.0", port=5000, debug=False)
