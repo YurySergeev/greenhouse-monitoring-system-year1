@@ -144,4 +144,3 @@ def render_section_header(title: str, icon = None):
     """
     st.markdown(html, unsafe_allow_html=True)
 
-
