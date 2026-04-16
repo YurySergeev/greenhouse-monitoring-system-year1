@@ -5,7 +5,6 @@ import certifi
 import os
 import logging
 from dotenv import load_dotenv
-from werkzeug.serving import make_server
 
 # -- Load env first --
 load_dotenv()
@@ -19,11 +18,13 @@ logging.getLogger("werkzeug").setLevel(logging.ERROR)
 # App + DB init
 # --------------------------------------------------
 
-app = Flask(__name__)
+
 
 MONGO_URI = os.getenv("MONGO_URI", "").strip()
 DB_NAME   = os.getenv("DB_NAME", "greenhouse_db").strip()
 
+
+app = Flask(__name__)
 # --------------------------------------------------
 # Node Registyr
 #
@@ -31,7 +32,6 @@ DB_NAME   = os.getenv("DB_NAME", "greenhouse_db").strip()
 # Sorted by collection -> sent to mongo
 # Collection can be shared by multiple nodes
 # --------------------------------------------------
-
 
 NODE_REGISTRY = {
     "pico_prototype_1_dht22": {
@@ -55,7 +55,9 @@ NODE_REGISTRY = {
 }
 try:
     client = MongoClient(MONGO_URI, tls=True, tlsCAFile=certifi.where())
+    
     client.admin.command("ping")
+    
     db = client[DB_NAME]
     _db_ok = True
 except Exception as e:
@@ -66,7 +68,6 @@ except Exception as e:
 
 _connected_nodes: dict = {}
 
-###########################################
 
 # --------------------------------------------------
 # Helpers
@@ -78,7 +79,7 @@ def _ts() -> str: # -- HH:MM:SS string for log
 
 
 def _print_banner():
-    width = 55
+    width = 30
     print("┌" + "─" * width + "┐")
     print("│" + "  Greenhouse Pico W Server".center(width) + "│")
     print("├" + "─" * width + "┤")
@@ -91,7 +92,7 @@ def _print_banner():
     print("├" + "─" * width + "┤")
     print("│" + f"  Registered nodes: {len(NODE_REGISTRY)}".ljust(width) + "│")
     for nid, cfg in NODE_REGISTRY.items():
-        line = f"     {nid}  -  {cfg['zone']} / {cfg['area']}"
+        line = f"     {nid}    {cfg['zone']} / {cfg['area']}"
         print("│" + line[:width].ljust(width) + "│")
  
     print("└" + "─" * width + "┘")
@@ -265,19 +266,8 @@ def receive_data():
 if __name__ == "__main__":
     # host='0.0.0.0' lets devices on the same Wi-Fi reach this server.
     # Change port if 5000 is taken.
-    
-    host = "0.0.0.0"
-    port = 5000
-
-    #initialize
-    server = make_server(host, port, app)
+    print("[Server] Starting on 0.0.0.0:5000 ...")
     
     _print_banner()
     
-    print(f"[Server] Server started on {host}:{port} ...")
-    
-    
-    server.serve_forever() #Starts blocking loop
-    
-    
-    
+    app.run(host="0.0.0.0", port=5000, debug=False)
