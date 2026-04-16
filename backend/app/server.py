@@ -12,9 +12,7 @@ DB_NAME = os.getenv("DB_NAME", "greenhouse_db")
 #get collection to db
 def get_collection():
     if not MONGO_URI:
-        print("ERROR: MONGO_URI is missing")   # changed
-        return None                            # changed
-        #raise ValueError("MONGO_URI is missing") #if db address missing throw error
+        raise ValueError("MONGO_URI is missing") #if db address missing throw error
 
 
     client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000) #connect to mongo
@@ -33,14 +31,11 @@ def create_app():
     @app.route("/api/sensor-data", methods=["POST"]) #receive sensor data,
     def receive_sensor_data():
         try:
-            data = request.get_json(silent=True) #reads JSON that is sent
+            data = request.get_json() #reads JSON that is sent
 
-            #if not data:
-            if data is None:
+            if not data:
                 return jsonify({"error": "No JSON received"}), 400 #if nothing is sent
-            # if temp_c or humidity_pct not found 
-            if "temp_c" not in data or "humidity_pct" not in data:
-                return jsonify({"error": "Missing required fields"}), 400
+
             # add extra fields into db before saving where is the sensor
             data["zone"] = "zone1"
             data["area"] = "upper_plants"
