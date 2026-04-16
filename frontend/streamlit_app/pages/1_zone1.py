@@ -31,6 +31,107 @@ from utils.sidebar import render_sidebar
 st.set_page_config(page_title="Zone 1", layout="wide")
 load_css()  # ← must be here, right after set_page_config
 
+<<<<<<< HEAD
+=======
+# ── Apply current theme ────────────────────────────────────────────────────────
+if "theme" not in st.session_state:
+    st.session_state.theme = "Feeling Green"
+
+if True:
+    from utils.themes import THEMES
+    import matplotlib.colors as plt
+    current_theme = THEMES[st.session_state.theme]
+    background_color = plt.XKCD_COLORS[current_theme["background"]]
+    sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
+    title_color = plt.XKCD_COLORS[current_theme["title"]]
+    boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
+    top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
+    text_color = current_theme["text_color"]
+    title_text_color = current_theme.get("title_text_color", text_color)
+    caption_color = current_theme.get("caption_color", text_color)
+    zone_text_color = current_theme.get("zone_text_color", text_color)
+
+    # helper to resolve color
+    def _resolve_color(value):
+        if isinstance(value, str) and value.startswith("xkcd:"):
+            return plt.XKCD_COLORS[value]
+        return value
+
+    subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
+
+    # Set theme variables
+    st.markdown(f"""
+    <style>
+    :root {{
+        --background-color: {background_color};
+        --sidebar-color: {sidebar_color};
+        --title-color: {title_color};
+        --boxes-color: {boxes_color};
+        --top-bar-color: {top_bar_color};
+        --text-color: {text_color};
+        --subtitle-color: {subtitle_color};
+        --secondary-background-color: {boxes_color};
+        --title-text-color: {title_text_color};
+        --caption-color: {caption_color};
+        --zone-text-color: {zone_text_color};
+    }}
+    
+    /* Zone 1 text color overrides - universal */
+    /* Apply white text to ALL elements on the page */
+    * {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Specifically target markdown and text content */
+    [data-testid="stMarkdown"] {{
+        color: {zone_text_color} !important;
+    }}
+    
+    [data-testid="stCaption"] {{
+        color: {zone_text_color} !important;
+    }}
+    
+    [data-testid="stCaption"] * {{
+        color: {zone_text_color} !important;
+    }}
+    
+    [data-testid="stCaption"] p,
+    [data-testid="stCaption"] span,
+    [data-testid="stCaption"] small {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Force white on all text elements - override inline styles */
+    [style*="color"] {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Force white on small text and captions */
+    small {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Target elements by their tag names more aggressively */
+    p {{
+        color: {zone_text_color} !important;
+    }}
+    
+    span {{
+        color: {zone_text_color} !important;
+    }}
+    
+    /* Override any specific page classes */
+    .page-title,
+    .page-subtitle {{
+        color: {zone_text_color} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Store theme color in session state for layout functions
+    st.session_state["zone_text_color"] = zone_text_color
+
+>>>>>>> parent of 71d5338 (Merge pull request #83 from Alpha-Project-Horticulture-Sensor/alert-system)
 render_sidebar()
 
 # ── Header ─────────────────────────────────────────────────────────────────────
