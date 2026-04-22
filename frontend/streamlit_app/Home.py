@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 from pathlib import Path
 
 st.set_page_config(page_title="Greenhouse — Kent State", layout="wide", page_icon="🌱")
@@ -20,12 +20,22 @@ render_sidebar()
 
 # ── Page title ─────────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="margin-bottom:32px;">
+<div style="text-align: center; margin-bottom:32px;">
     <p style="font-size:24px;font-weight:600;color:var(--text-color);margin:0;">
         Kent State Greenhouse
     </p>
     <p style="font-size:14px;color:var(--text-color);opacity:0.55;margin:4px 0 0 0;">
         Environmental monitoring system
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Info Paragraph ─────────────────────────────────────────────────────────────
+st.markdown("""
+<div style="text-align: center; margin-bottom:32px;">
+    <p style="font-size:14px;color:var(--text-color);opacity:0.85;margin:4px 0 0 0;">
+        Welcome to the Kent State University Greenhouse Website! 
+        This monitoring system gives you a real-time view of your growing environment. It combines sensor data with live weather updates to help track important conditions like temperature and humidity across the different zones. Centralizing this data helps you monitor and maintain awareness for you to make adjustments to support healthy plant growth! The information cards below share more capabilities of this webstie!
     </p>
 </div>
 """, unsafe_allow_html=True)

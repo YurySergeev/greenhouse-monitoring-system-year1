@@ -16,6 +16,12 @@ def render_sidebar():
         st.divider()
 
         # Zone navigation
+        st.markdown('<p class="section-label">Home</p>', unsafe_allow_html=True)
+
+        if st.button("Home", use_container_width=True):
+            st.switch_page("Home.py")
+
+        # Zone navigation
         st.markdown('<p class="section-label">Zones</p>', unsafe_allow_html=True)
 
         if st.button("Zone 1", use_container_width=True):

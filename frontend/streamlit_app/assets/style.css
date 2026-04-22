@@ -1,6 +1,6 @@
-/* ── Hide auto-generated second sidebar nav item ── */
-[data-testid="stSidebarNav"] ul li:nth-child(2) {
-    display: none;
+/* ── Hide auto-generated sidebar nav (Home, Settings) ── */
+[data-testid="stSidebarNav"] {
+    display: none !important;
 }
 
 /* ── Page background ── */
