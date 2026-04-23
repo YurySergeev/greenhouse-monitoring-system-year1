@@ -1,118 +1,273 @@
-﻿import streamlit as st
-from pathlib import Path
-import matplotlib.colors as plt
 import base64
+from pathlib import Path
+from textwrap import dedent
 
-st.set_page_config(page_title="Greenhouse — Kent State", layout="wide", page_icon="🌱")
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-BASE_DIR   = Path(__file__).resolve().parent
-ASSETS_DIR = BASE_DIR / "assets"
-IMG_PATH   = ASSETS_DIR / "greenhouse2.jpg"
-
-# ── Load CSS ───────────────────────────────────────────────────────────────────
-css_path = BASE_DIR / "assets" / "style.css"
-if css_path.exists():
-    st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
-
-from utils.themes import THEMES
-
-# Initialize session state for theme
-if "theme" not in st.session_state:
-    st.session_state.theme = "Feeling Green"
-
-# Get current theme colors
-current_theme = THEMES[st.session_state.theme]
-background_color = plt.XKCD_COLORS[current_theme["background"]]
-sidebar_color = plt.XKCD_COLORS[current_theme["sidebar"]]
-title_color = plt.XKCD_COLORS[current_theme["title"]]
-boxes_color = plt.XKCD_COLORS[current_theme["boxes"]]
-top_bar_color = plt.XKCD_COLORS[current_theme["top_bar"]]
-text_color = current_theme["text_color"]
-title_text_color = current_theme.get("title_text_color", text_color)
-caption_color = current_theme.get("caption_color", text_color)
-zone_text_color = current_theme.get("zone_text_color", text_color)
-
-# helper to resolve color
-def _resolve_color(value):
-    if isinstance(value, str) and value.startswith("xkcd:"):
-        return plt.XKCD_COLORS[value]
-    return value
-
-subtitle_color = _resolve_color(current_theme.get("subtitle", current_theme["text_color"]))
-
-# Set theme variables
-
-
-# ── Shared sidebar ─────────────────────────────────────────────────────────────
+from utils.alerts import evaluate_humidity_alert, evaluate_temperature_alert
+from utils.db import load_history, load_latest
+from utils.layout import (
+    CELSIUS_UNIT,
+    render_overview_card,
+    render_page_header,
+    render_section_header,
+    render_status_panel,
+)
 from utils.sidebar import render_sidebar
+from utils.styles import load_css
+from utils.zone_config import ZONE1_AREAS
+
+PAGE_ICON = "\N{SEEDLING}"
+SNAPSHOT_ICON = "\N{HERB}"
+POSITION_ICON = "\N{POTTED PLANT}"
+TREND_ICON = "\N{CHART WITH UPWARDS TREND}"
+BASE_DIR = Path(__file__).resolve().parent
+GREENHOUSE_IMAGE = BASE_DIR / "assets" / "greenhouse.jpg"
+
+st.set_page_config(
+    page_title="Greenhouse Overview",
+    layout="wide",
+    page_icon=PAGE_ICON,
+    initial_sidebar_state="expanded",
+)
+load_css()
 render_sidebar()
 
-# ── Page title ─────────────────────────────────────────────────────────────────
-st.markdown("""
-<div style="margin-bottom:32px;">
-    <p style="font-size:24px;font-weight:600;color:var(--title-text-color);margin:0;">
-        Kent State Greenhouse
-    </p>
-    <p style="font-size:14px;color:var(--title-text-color);opacity:0.55;margin:4px 0 0 0;">
-        Environmental monitoring system
-    </p>
-</div>
-""", unsafe_allow_html=True)
 
-# ── Info cards ─────────────────────────────────────────────────────────────────
-col1, col2, col3 = st.columns(3)
+def _to_local_time(series: pd.Series) -> pd.Series:
+    timestamps = pd.to_datetime(series)
+    if getattr(timestamps.dt, "tz", None) is None:
+        return timestamps.dt.tz_localize("UTC").dt.tz_convert("US/Eastern")
+    return timestamps.dt.tz_convert("US/Eastern")
 
-CARD         = "background:var(--secondary-background-color);border:1px solid rgba(128,128,128,0.2);border-radius:12px;padding:20px 22px;"
-TEXT_PRIMARY = "color:var(--text-color);"
-TEXT_MUTED   = "color:var(--text-color);opacity:0.55;"
 
-with col1:
-    st.markdown(f"""
-    <div style="{CARD}">
-        <div style="font-size:22px;margin-bottom:10px;">🌡️</div>
-        <p style="font-size:13px;font-weight:600;{TEXT_PRIMARY}margin:0 0 10px 0;">Environmental sensors</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0 0 4px 0;">Temperature</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0 0 4px 0;">Humidity</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0 0 4px 0;">Soil moisture</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0;">pH</p>
-    </div>
-    """, unsafe_allow_html=True)
+def _alert_state_for_area(area: dict, latest: dict | None) -> tuple[str, str]:
+    if not latest:
+        return "neutral", "Waiting for data"
 
-with col2:
-    st.markdown(f"""
-    <div style="{CARD}">
-        <div style="font-size:22px;margin-bottom:10px;">📡</div>
-        <p style="font-size:13px;font-weight:600;{TEXT_PRIMARY}margin:0 0 10px 0;">System capabilities</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0 0 4px 0;">Zone dashboards</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0 0 4px 0;">Live alerts</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0 0 4px 0;">Historical charts</p>
-        <p style="font-size:12px;{TEXT_MUTED}margin:0;">Raspberry Pi integration</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if area["schema"] == "weather":
+        return "neutral", "Outside reference"
 
-with col3:
-    st.markdown(f"""
-    <div style="{CARD}">
-        <div style="font-size:22px;margin-bottom:10px;">🗂️</div>
-        <p style="font-size:13px;font-weight:600;{TEXT_PRIMARY}margin:0 0 10px 0;">Active zones</p>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:#10B981;flex-shrink:0;"></div>
-            <span style="font-size:12px;{TEXT_PRIMARY}">Zone 1 — online</span>
+    temp_alert = evaluate_temperature_alert(latest.get("temp_c"), zone="zone1")
+    humidity_alert = evaluate_humidity_alert(latest.get("humidity_pct"), zone="zone1")
+
+    if temp_alert or humidity_alert:
+        if temp_alert and temp_alert["kind"] == "high":
+            return "alert", "Too warm"
+        if temp_alert and temp_alert["kind"] == "low":
+            return "warn", "Running cool"
+        if humidity_alert and humidity_alert["kind"] == "high":
+            return "warn", "Humidity high"
+        return "warn", "Humidity low"
+
+    return "good", "Within target"
+
+
+def _plot_card_start():
+    st.markdown('<div class="plot-card">', unsafe_allow_html=True)
+
+
+def _plot_card_end():
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+snapshots = {}
+for area in ZONE1_AREAS:
+    snapshots[area["key"]] = load_latest(area["collection"], area["schema"])
+
+zone1_latest = snapshots.get("upper")
+outside_latest = snapshots.get("outside")
+
+online_count = sum(1 for snapshot in snapshots.values() if snapshot)
+healthy_count = 0
+attention_count = 0
+for area in ZONE1_AREAS[:3]:
+    tone, _ = _alert_state_for_area(area, snapshots.get(area["key"]))
+    if tone == "good":
+        healthy_count += 1
+    elif tone in {"warn", "alert"}:
+        attention_count += 1
+
+hero_pills = [
+    f"{online_count}/{len(ZONE1_AREAS)} positions reporting",
+    f"{healthy_count} canopy bands in target",
+    f"{attention_count} positions need attention" if attention_count else "No active climate exceptions",
+]
+
+render_page_header(
+    "Greenhouse Home",
+    "A single place to watch canopy conditions, compare inside and outside climate, and spot issues before they stress the plants.",
+    badge_text="Operations",
+)
+
+
+def _render_html(html: str):
+    normalized = "\n".join(line.strip() for line in dedent(html).splitlines() if line.strip())
+    if hasattr(st, "html"):
+        st.html(normalized)
+    else:
+        st.markdown(normalized, unsafe_allow_html=True)
+
+greenhouse_image_html = ""
+if GREENHOUSE_IMAGE.exists():
+    image_b64 = base64.b64encode(GREENHOUSE_IMAGE.read_bytes()).decode("ascii")
+    greenhouse_image_html = dedent(
+        f"""
+        <div class="hero-visual">
+            <img src="data:image/jpeg;base64,{image_b64}" alt="Greenhouse interior" />
+            <div class="hero-visual-badge">
+                <span class="hero-visual-badge-dot"></span>
+                Kent State greenhouse
+            </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:rgba(128,128,128,0.4);flex-shrink:0;"></div>
-            <span style="font-size:12px;{TEXT_MUTED}">Zone 2 — coming soon</span>
+        """
+    ).strip()
+
+_render_html(
+    f"""
+    <div class="hero-panel">
+        <div class="hero-split">
+            <div>
+                <div class="hero-eyebrow">Kent State Greenhouse</div>
+                <div class="hero-title">Clean, fast climate awareness for daily greenhouse work.</div>
+                <p class="hero-copy">
+                    This home screen keeps the most important context above the fold: live indoor climate, outside reference conditions,
+                    reporting sensor positions, and whether any area has drifted outside the configured plant-safe range.
+                </p>
+                <div class="hero-meta">
+                    {''.join(f'<span class="hero-meta-pill">{pill}</span>' for pill in hero_pills)}
+                </div>
+            </div>
+            {greenhouse_image_html}
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+)
 
-# ── Greenhouse image ─────────────────────────────────────────────────────────────────
-st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-if IMG_PATH.exists():
-    st.markdown(f"""
-    <div style="text-align: center;">
-        <img src="data:image/png;base64,{base64.b64encode(IMG_PATH.read_bytes()).decode()}" style="width: 100%; max-width: 800px;" />
-        <p style="margin-top: 10px; color: var(--caption-color); font-size: 14px;">Kent State University greenhouse facility</p>
-    </div>
-    """, unsafe_allow_html=True)
+render_section_header("Current Snapshot", icon=SNAPSHOT_ICON)
+top_cols = st.columns(4)
+with top_cols[0]:
+    zone_temp = f"{zone1_latest['temp_c']:.1f}{CELSIUS_UNIT}" if zone1_latest and zone1_latest.get("temp_c") is not None else "No data"
+    render_overview_card("Zone 1 temperature", zone_temp, "Upper canopy live reading.")
+with top_cols[1]:
+    zone_humidity = f"{zone1_latest['humidity_pct']:.0f}% RH" if zone1_latest and zone1_latest.get("humidity_pct") is not None else "No data"
+    render_overview_card("Zone 1 humidity", zone_humidity, "Relative humidity at the primary canopy monitor.")
+with top_cols[2]:
+    outside_temp = f"{outside_latest['temp_c']:.1f}{CELSIUS_UNIT}" if outside_latest and outside_latest.get("temp_c") is not None else "No data"
+    render_overview_card("Outside reference", outside_temp, "Weather feed used as a greenhouse reference point.")
+with top_cols[3]:
+    alert_summary = "Clear" if attention_count == 0 else f"{attention_count} flagged"
+    summary_copy = "All monitored indoor positions are inside the target band." if attention_count == 0 else "One or more indoor positions have drifted outside the configured range."
+    render_overview_card("Attention", alert_summary, summary_copy)
+
+render_section_header("Monitoring Positions", icon=POSITION_ICON)
+status_items = []
+for area in ZONE1_AREAS:
+    latest = snapshots.get(area["key"])
+    tone, state = _alert_state_for_area(area, latest)
+    if latest and latest.get("temp_c") is not None and latest.get("humidity_pct") is not None:
+        detail = f"{latest['temp_c']:.1f}{CELSIUS_UNIT} and {latest['humidity_pct']:.0f}% RH"
+    elif latest and latest.get("temp_c") is not None:
+        detail = f"{latest['temp_c']:.1f}{CELSIUS_UNIT}"
+    else:
+        detail = "No readings received yet."
+
+    if area["schema"] == "weather" and latest and latest.get("weather_desc"):
+        detail = f"{detail} | {str(latest['weather_desc']).title()}"
+
+    status_items.append(
+        {
+            "label": "Position",
+            "state": state,
+            "title": area["label"],
+            "detail": detail,
+            "tone": tone,
+        }
+    )
+render_status_panel(status_items)
+
+render_section_header("Recent Climate Trend", icon=TREND_ICON)
+history_cols = st.columns(2)
+
+indoor_history = load_history("zone1-upper", "pico", hours=24)
+outside_history = load_history("outside_weather_data", "weather", hours=24)
+
+for frame in (indoor_history, outside_history):
+    if not frame.empty and "ts" in frame.columns:
+        frame["ts"] = _to_local_time(frame["ts"])
+
+with history_cols[0]:
+    _plot_card_start()
+    st.markdown("**Temperature, last 24 hours**")
+    if not indoor_history.empty and not outside_history.empty:
+        temp_fig = go.Figure()
+        temp_fig.add_trace(
+            go.Scatter(
+                x=indoor_history["ts"],
+                y=indoor_history["temp_c"],
+                mode="lines",
+                name="Zone 1 upper canopy",
+                line=dict(color="#4F8B63", width=3),
+            )
+        )
+        temp_fig.add_trace(
+            go.Scatter(
+                x=outside_history["ts"],
+                y=outside_history["temp_c"],
+                mode="lines",
+                name="Outside reference",
+                line=dict(color="#4C83C3", width=2, dash="dot"),
+            )
+        )
+        temp_fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=16, b=8),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+            hovermode="x unified",
+            yaxis=dict(title=CELSIUS_UNIT, showgrid=True, gridcolor="rgba(99, 116, 106, 0.12)"),
+            xaxis=dict(showgrid=False, tickformat="%b %d\n%I:%M %p"),
+        )
+        st.plotly_chart(temp_fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("Temperature history will appear here once both indoor and outside feeds have recent data.")
+    _plot_card_end()
+
+with history_cols[1]:
+    _plot_card_start()
+    st.markdown("**Humidity, last 24 hours**")
+    if not indoor_history.empty and not outside_history.empty:
+        humidity_fig = go.Figure()
+        humidity_fig.add_trace(
+            go.Scatter(
+                x=indoor_history["ts"],
+                y=indoor_history["humidity_pct"],
+                mode="lines",
+                name="Zone 1 upper canopy",
+                line=dict(color="#4F8B63", width=3),
+            )
+        )
+        humidity_fig.add_trace(
+            go.Scatter(
+                x=outside_history["ts"],
+                y=outside_history["humidity_pct"],
+                mode="lines",
+                name="Outside reference",
+                line=dict(color="#4C83C3", width=2, dash="dot"),
+            )
+        )
+        humidity_fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=8, r=8, t=16, b=8),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+            hovermode="x unified",
+            yaxis=dict(title="% RH", showgrid=True, gridcolor="rgba(99, 116, 106, 0.12)"),
+            xaxis=dict(showgrid=False, tickformat="%b %d\n%I:%M %p"),
+        )
+        st.plotly_chart(humidity_fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("Humidity history will appear here once both indoor and outside feeds have recent data.")
+    _plot_card_end()
