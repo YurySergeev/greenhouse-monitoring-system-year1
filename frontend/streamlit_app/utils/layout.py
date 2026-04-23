@@ -106,6 +106,7 @@ def render_metric_card(
     )
 
 
+
 def render_metrics_row(metrics: list[dict]):
     columns = st.columns(len(metrics))
     for column, metric in zip(columns, metrics):

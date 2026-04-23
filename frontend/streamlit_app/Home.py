@@ -36,6 +36,7 @@ load_css()
 render_sidebar()
 
 
+
 def _to_local_time(series: pd.Series) -> pd.Series:
     timestamps = pd.to_datetime(series)
     if getattr(timestamps.dt, "tz", None) is None:
