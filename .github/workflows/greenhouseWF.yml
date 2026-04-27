@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 env:
-  HOST: greenhouse.kentcs.org
+  HOST: greenhouse.cortana.org
   USER: greenhouse
-  TARGET: greenhouse@greenhouse.kentcs.org
-  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.kentcs.org
+  TARGET: greenhouse@greenhouse.cortana.org
+  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.cortana.org
   COPY: scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
 
 jobs:
@@ -35,19 +35,19 @@ jobs:
           echo $ whoami
           whoami 
 
-      - name: Check out cassini
+      - name: Check out to greenhouse
         run: |
           echo $RUN ls -la
           $RUN ls -la
 
-          echo $ ssh greenhouse@greenhouse.kentcs.org ls -la
-          ssh greenhouse@greenhouse.kentcs.org ls -la 
-          echo $ ssh greenhouse@greenhouse.kentcs.org whoami
-          ssh greenhouse@greenhouse.kentcs.org whoami 
-          echo $ ssh greenhouse@greenhouse.kentcs.org hostname
-          ssh greenhouse@greenhouse.kentcs.org hostname
-          echo $ greenhouse@greenhouse.kentcs.org mkdir -p ./web
-          ssh greenhouse@greenhouse.kentcs.org mkdir -p ./web
+          echo $ ssh greenhouse@greenhouse.cortana.org ls -la
+          ssh greenhouse@greenhouse.cortana.org ls -la 
+          echo $ ssh greenhouse@greenhouse.cortana.org whoami
+          ssh greenhouse@greenhouse.cortana.org whoami 
+          echo $ ssh greenhouse@greenhouse.cortana.org hostname
+          ssh greenhouse@greenhouse.cortana.org hostname
+          echo $ greenhouse@greenhouse.cortana.org mkdir -p ./web
+          ssh greenhouse@greenhouse.cortana.org mkdir -p ./web
 
           echo " Zipping project locally "
           zip -r greenhouse.zip . 
@@ -58,8 +58,8 @@ jobs:
           $RUN "rm -f ~/web/greenhouse.zip"
 
           echo " Copying zip to Cassini "
-          echo $COPY greenhouse.zip greenhouse@greenhouse.kentcs.org:./web
-          $COPY greenhouse.zip greenhouse@greenhouse.kentcs.org:./web
+          echo $COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web
+          $COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web
 
           echo " Unzipping on Cassini "
           $RUN "cd ~/web && python3 -m zipfile -e greenhouse.zip ."
