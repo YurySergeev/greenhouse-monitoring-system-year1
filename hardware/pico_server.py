@@ -52,7 +52,11 @@ NODE_REGISTRY = {
         "collection": "zone1-lower", 
     },
     
-    
+    "pico_prototype_1_dht22_outside": {
+        "zone":       "zone1",
+        "area":       "upper_plants",
+        "collection": "outside_weather_data", 
+    },
     #"Example_pico_ID": {
     #    "zone":       "zone 1/2/3 ...",
     #    "area":       "Up/mid/bot",

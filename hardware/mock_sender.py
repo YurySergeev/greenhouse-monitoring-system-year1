@@ -46,6 +46,12 @@ def main():
         zone="zone1",
         area="upper_plants",
     )
+    
+    sensor4 = MockSensorNode(
+        node_id="pico_prototype_1_dht22_outside",
+        zone="zone1",
+        area="upper_plants",
+    )
 
     print(f"[Dummy Sender] Starting — POSTing to {SERVER_URL} every {INTERVAL}s")
     print("[Dummy Sender] Press Ctrl+C to stop.\n")
@@ -54,6 +60,50 @@ def main():
         #===================================
         # 1. Generate a fake reading
         payload = sensor.get_readings()
+        print(f"[Reading] {payload}")
+
+        # 2. POST to the Flask server
+        try:
+            response = requests.post(SERVER_URL, json=payload, timeout=5)
+            data     = response.json()
+
+            if response.status_code == 200:
+                print(f"[Server] Saved  — id: {data.get('id')}")
+            else:
+                print(f"[Server] Error  — {data.get('message')}")
+
+        except requests.exceptions.ConnectionError:
+            print("[Server] Could not connect — is pico_server.py running?")
+        except Exception as e:
+            print(f"[Error] {e}")
+
+        print(f"[Waiting] Next reading in {INTERVAL}s...\n")
+        time.sleep(INTERVAL)
+        
+        #===================================
+        # 1. Generate a fake reading
+        payload = sensor4.get_readings()
+        print(f"[Reading] {payload}")
+
+        # 2. POST to the Flask server
+        try:
+            response = requests.post(SERVER_URL, json=payload, timeout=5)
+            data     = response.json()
+
+            if response.status_code == 200:
+                print(f"[Server] Saved  — id: {data.get('id')}")
+            else:
+                print(f"[Server] Error  — {data.get('message')}")
+
+        except requests.exceptions.ConnectionError:
+            print("[Server] Could not connect — is pico_server.py running?")
+        except Exception as e:
+            print(f"[Error] {e}")
+
+        print(f"[Waiting] Next reading in {INTERVAL}s...\n")
+        time.sleep(INTERVAL)
+        
+        payload = sensor4.get_readings()
         print(f"[Reading] {payload}")
 
         # 2. POST to the Flask server

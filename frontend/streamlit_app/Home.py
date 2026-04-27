@@ -192,34 +192,26 @@ render_status_panel(status_items)
 render_section_header("Recent Climate Trend", icon=TREND_ICON)
 history_cols = st.columns(2)
 
-indoor_history = load_history("zone1-upper", "pico", hours=24)
 outside_history = load_history("outside_weather_data", "weather", hours=24)
 
-for frame in (indoor_history, outside_history):
-    if not frame.empty and "ts" in frame.columns:
-        frame["ts"] = _to_local_time(frame["ts"])
+if not outside_history.empty and "ts" in outside_history.columns:
+    outside_history["ts"] = _to_local_time(outside_history["ts"])
+
+_has_temp = not outside_history.empty and "temp_c" in outside_history.columns
+_has_humidity = not outside_history.empty and "humidity_pct" in outside_history.columns
 
 with history_cols[0]:
     _plot_card_start()
     st.markdown("**Temperature, last 24 hours**")
-    if not indoor_history.empty and not outside_history.empty:
+    if _has_temp:
         temp_fig = go.Figure()
-        temp_fig.add_trace(
-            go.Scatter(
-                x=indoor_history["ts"],
-                y=indoor_history["temp_c"],
-                mode="lines",
-                name="Zone 1 upper canopy",
-                line=dict(color="#4F8B63", width=3),
-            )
-        )
         temp_fig.add_trace(
             go.Scatter(
                 x=outside_history["ts"],
                 y=outside_history["temp_c"],
                 mode="lines",
-                name="Outside reference",
-                line=dict(color="#4C83C3", width=2, dash="dot"),
+                name="Outside",
+                line=dict(color="#4C83C3", width=2),
             )
         )
         temp_fig.update_layout(
@@ -233,30 +225,21 @@ with history_cols[0]:
         )
         st.plotly_chart(temp_fig, use_container_width=True, config={"displayModeBar": False})
     else:
-        st.info("Temperature history will appear here once both indoor and outside feeds have recent data.")
+        st.info("Outside temperature history will appear here once data has been received.")
     _plot_card_end()
 
 with history_cols[1]:
     _plot_card_start()
     st.markdown("**Humidity, last 24 hours**")
-    if not indoor_history.empty and not outside_history.empty:
+    if _has_humidity:
         humidity_fig = go.Figure()
-        humidity_fig.add_trace(
-            go.Scatter(
-                x=indoor_history["ts"],
-                y=indoor_history["humidity_pct"],
-                mode="lines",
-                name="Zone 1 upper canopy",
-                line=dict(color="#4F8B63", width=3),
-            )
-        )
         humidity_fig.add_trace(
             go.Scatter(
                 x=outside_history["ts"],
                 y=outside_history["humidity_pct"],
                 mode="lines",
-                name="Outside reference",
-                line=dict(color="#4C83C3", width=2, dash="dot"),
+                name="Outside",
+                line=dict(color="#4C83C3", width=2),
             )
         )
         humidity_fig.update_layout(
@@ -270,5 +253,5 @@ with history_cols[1]:
         )
         st.plotly_chart(humidity_fig, use_container_width=True, config={"displayModeBar": False})
     else:
-        st.info("Humidity history will appear here once both indoor and outside feeds have recent data.")
+        st.info("Outside humidity history will appear here once data has been received.")
     _plot_card_end()
