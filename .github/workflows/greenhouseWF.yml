@@ -30,24 +30,24 @@ jobs:
 
       - name: Check out the VM
         run: |
-          echo $ ls -la
+          echo "$ ls -la"
           ls -la
-          echo $ whoami
+          echo "$ whoami"
           whoami 
 
       - name: Check out to greenhouse
         run: |
-          echo $RUN ls -la
+          echo "$RUN ls -la"
           $RUN ls -la
 
-          echo $ ssh greenhouse@greenhouse.cortana.org ls -la
-          ssh greenhouse@greenhouse.cortana.org ls -la 
-          echo $ ssh greenhouse@greenhouse.cortana.org whoami
-          ssh greenhouse@greenhouse.cortana.org whoami 
-          echo $ ssh greenhouse@greenhouse.cortana.org hostname
-          ssh greenhouse@greenhouse.cortana.org hostname
-          echo $ greenhouse@greenhouse.cortana.org mkdir -p ./web
-          ssh greenhouse@greenhouse.cortana.org mkdir -p ./web
+          echo "$RUN whoami"
+          $RUN whoami 
+
+          echo "$RUN hostname"
+          $RUN hostname
+
+          echo "$RUN mkdir -p ./web"
+          $RUN mkdir -p ./web
 
           echo " Zipping project locally "
           zip -r greenhouse.zip . 
@@ -58,7 +58,7 @@ jobs:
           $RUN "rm -f ~/web/greenhouse.zip"
 
           echo " Copying zip to Cassini "
-          echo $COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web
+          echo "$COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web"
           $COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web
 
           echo " Unzipping on Cassini "
