@@ -33,7 +33,7 @@ ZONE1_AREAS = [
         "key":        "outside",
         "label":      "Outside reference",
         "collection": "outside_weather_data",
-        "schema":     "weather",
+        "schema":     "pico",
     },
 ]
 

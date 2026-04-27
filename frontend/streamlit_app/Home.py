@@ -48,7 +48,7 @@ def _alert_state_for_area(area: dict, latest: dict | None) -> tuple[str, str]:
     if not latest:
         return "neutral", "Waiting for data"
 
-    if area["schema"] == "weather":
+    if area["schema"] == "pico":
         return "neutral", "Outside reference"
 
     temp_alert = evaluate_temperature_alert(latest.get("temp_c"), zone="zone1")
@@ -192,7 +192,7 @@ render_status_panel(status_items)
 render_section_header("Recent Climate Trend", icon=TREND_ICON)
 history_cols = st.columns(2)
 
-outside_history = load_history("outside_weather_data", "weather", hours=24)
+outside_history = load_history("outside_weather_data", "pico", hours=24)
 
 if not outside_history.empty and "ts" in outside_history.columns:
     outside_history["ts"] = _to_local_time(outside_history["ts"])

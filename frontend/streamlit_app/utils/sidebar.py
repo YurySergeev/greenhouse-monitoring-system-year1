@@ -16,7 +16,7 @@ LOGO_PATH = ASSETS_DIR / "logo3.png"
 def _sidebar_status_snapshot():
     indoor_area = ZONE1_AREAS[0]
     indoor_latest = load_latest(indoor_area["collection"], indoor_area["schema"])
-    outside_latest = load_latest("outside_weather_data", "weather")
+    outside_latest = load_latest("outside_weather_data", "pico")
 
     if not indoor_latest:
         return {
