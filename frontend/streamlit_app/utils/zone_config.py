@@ -13,27 +13,27 @@ Schemas:
 ZONE1_AREAS = [
     {
         "key":        "upper",
-        "label":      "Upper reading",
+        "label":      "Upper canopy",
         "collection": "zone1-upper",
         "schema":     "pico",
     },
     {
         "key":        "middle",
-        "label":      "Middle reading",
+        "label":      "Mid canopy",
         "collection": "zone1-middle",
         "schema":     "pico",
     },
     {
         "key":        "lower",
-        "label":      "Lower reading",
+        "label":      "Root zone",
         "collection": "zone1-lower",
         "schema":     "pico",
     },
     {
         "key":        "outside",
-        "label":      "Outside",
+        "label":      "Outside reference",
         "collection": "outside_weather_data",
-        "schema":     "weather",
+        "schema":     "pico",
     },
 ]
 

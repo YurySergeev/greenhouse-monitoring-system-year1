@@ -26,7 +26,7 @@ DB_NAME   = os.getenv("DB_NAME", "greenhouse_db").strip()
 
 app = Flask(__name__)
 # --------------------------------------------------
-# Node Registyr
+# Node Registar
 #
 # All known nodes go here
 # Sorted by collection -> sent to mongo
@@ -34,18 +34,29 @@ app = Flask(__name__)
 # --------------------------------------------------
 
 NODE_REGISTRY = {
-    "pico_prototype_1_dht22": {
+    "pico_prototype_1_dht22_upper": {
         "zone":       "zone1",
         "area":       "upper_plants",
-        "collection": "zone1_dht22_test", #SENT TO SAME COLLECTION
+        "collection": "zone1-upper", 
     },
     
-    "pico_prototype_1_dht11": {
+    "pico_prototype_1_dht22_middle": {
         "zone":       "zone1",
         "area":       "upper_plants",
-        "collection": "zone1_dht22_test", #SENT TO SAME COLLECTION
+        "collection": "zone1-middle", 
     },
     
+    "pico_prototype_1_dht22_low": {
+        "zone":       "zone1",
+        "area":       "upper_plants",
+        "collection": "zone1-lower", 
+    },
+    
+    "pico_prototype_1_dht22_outside": {
+        "zone":       "zone1",
+        "area":       "upper_plants",
+        "collection": "outside_weather_data", 
+    },
     #"Example_pico_ID": {
     #    "zone":       "zone 1/2/3 ...",
     #    "area":       "Up/mid/bot",

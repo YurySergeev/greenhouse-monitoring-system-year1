@@ -1,61 +1,142 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 
-from utils.styles import load_css
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from utils.db import (
-    load_latest,
-    load_history,
-    load_readings,
+from utils.alerts import (  # noqa: E402
+    evaluate_humidity_alert,
+    evaluate_temperature_alert,
+    get_zone_alert,
+    mark_email_alert_sent,
+    should_send_email_alert,
 )
-from utils.zone_config import ZONE1_AREAS, get_area
-
-from utils.layout import (
-    render_zone_header,
-    render_refresh_update,
+from utils.db import load_history, load_latest, load_readings  # noqa: E402
+from utils.emailer import (  # noqa: E402
+    send_humidity_alert_email,
+    send_temperature_alert_email,
+)
+from utils.layout import (  # noqa: E402
+    CELSIUS_UNIT,
+    FAHRENHEIT_UNIT,
     render_metrics_row,
+    render_refresh_update,
     render_section_header,
+    render_status_panel,
     render_zone1_top_controls,
+    render_zone_header,
 )
-from utils.sidebar import render_sidebar
-from utils.alerts import get_zone_alert, evaluate_temperature_alert, evaluate_humidity_alert, mark_email_alert_sent, should_send_email_alert
-from utils.emailer import send_temperature_alert_email, send_humidity_alert_email
+from utils.sidebar import render_sidebar  # noqa: E402
+from utils.styles import load_css  # noqa: E402
+from utils.zone_config import ZONE1_AREAS, get_area  # noqa: E402
 
-# ── Page config THEN CSS — must happen before any other st calls ───────────────
-st.set_page_config(page_title="Zone 1", layout="wide")
+POSITION_ICON = "\N{POTTED PLANT}"
+CLIMATE_ICON = "\N{SEEDLING}"
+HISTORY_ICON = "\N{CHART WITH UPWARDS TREND}"
+TEMPERATURE_ICON = "\N{THERMOMETER}"
+HUMIDITY_ICON = "\N{DROPLET}"
+OUTSIDE_ICON = "\N{SUN BEHIND CLOUD}"
+FEED_ICON = "\N{SATELLITE ANTENNA}"
+
+st.set_page_config(page_title="Zone 1", layout="wide", initial_sidebar_state="expanded")
 load_css()
-
-# ── Apply current theme ────────────────────────────────────────────────────────
-# Only zone_text_color is consumed by downstream layout helpers via session_state;
-# other theme variables are resolved inside the CSS/layout modules.
-if "theme" not in st.session_state:
-    st.session_state.theme = "Feeling Green"
-
-from utils.themes import THEMES
-import matplotlib.colors as plt
-current_theme = THEMES[st.session_state.theme]
-text_color = current_theme["text_color"]
-zone_text_color = current_theme.get("zone_text_color", text_color)
-st.session_state["zone_text_color"] = zone_text_color
-
 render_sidebar()
 
-# ── Header ─────────────────────────────────────────────────────────────────────
+
+def _to_local_time(series: pd.Series) -> pd.Series:
+    timestamps = pd.to_datetime(series)
+    if getattr(timestamps.dt, "tz", None) is None:
+        return timestamps.dt.tz_localize("UTC").dt.tz_convert("US/Eastern")
+    return timestamps.dt.tz_convert("US/Eastern")
+
+
+def _format_temp(value_c: float | None, unit: str) -> str:
+    if value_c is None:
+        return "No data"
+    if unit == FAHRENHEIT_UNIT:
+        return f"{(value_c * 9.0 / 5.0) + 32.0:.1f}{FAHRENHEIT_UNIT}"
+    return f"{value_c:.1f}{CELSIUS_UNIT}"
+
+
+def _format_temp_html(value_c: float | None, unit: str) -> str:
+    if value_c is None:
+        return "No data"
+    if unit == FAHRENHEIT_UNIT:
+        return f"{(value_c * 9.0 / 5.0) + 32.0:.1f}<span class='metric-unit'>{FAHRENHEIT_UNIT}</span>"
+    return f"{value_c:.1f}<span class='metric-unit'>{CELSIUS_UNIT}</span>"
+
+
+def _trend_delta(df: pd.DataFrame, column: str) -> float | None:
+    if df.empty or column not in df.columns:
+        return None
+    valid = df[column].dropna()
+    if len(valid) < 2:
+        return None
+    return float(valid.iloc[-1] - valid.iloc[0])
+
+
+def _trend_text(delta: float | None, suffix: str, neutral_text: str = "Stable") -> tuple[str, str]:
+    if delta is None:
+        return "Awaiting trend", ""
+    if abs(delta) < 0.15:
+        return neutral_text, "trend-good"
+    direction = "Up" if delta > 0 else "Down"
+    css_class = "trend-warn" if abs(delta) >= 1 else "trend-good"
+    return f"{direction} {abs(delta):.1f}{suffix} over the last 2 hours", css_class
+
+
+def _status_for_metric(metric_name: str, value, alert, detail: str, disabled: bool = False) -> dict:
+    if value is None:
+        return {
+            "label": metric_name,
+            "state": "No data",
+            "title": "Sensor feed",
+            "detail": f"{detail} No current reading is available yet.",
+            "tone": "neutral",
+        }
+    if disabled:
+        return {
+            "label": metric_name,
+            "state": "Muted",
+            "title": "Alerts disabled",
+            "detail": detail,
+            "tone": "neutral",
+        }
+    if not alert:
+        return {
+            "label": metric_name,
+            "state": "In range",
+            "title": "Plant-safe",
+            "detail": detail,
+            "tone": "good",
+        }
+    return {
+        "label": metric_name,
+        "state": "Attention",
+        "title": "Threshold crossed",
+        "detail": detail,
+        "tone": "alert" if alert["kind"] == "high" and metric_name == "Temperature" else "warn",
+    }
+
+
+def _plot_card_start():
+    st.markdown('<div class="plot-card">', unsafe_allow_html=True)
+
+
+def _plot_card_end():
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 render_zone_header("Zone 1")
 render_refresh_update()
 
-section, unit = render_zone1_top_controls()
-
-# ── Area selector (one button per collection in ZONE1_AREAS) ──────────────────
 if "zone1_area_key" not in st.session_state:
     st.session_state["zone1_area_key"] = ZONE1_AREAS[0]["key"]
 
-render_section_header("Area")
+render_section_header("Monitoring Position", icon=POSITION_ICON)
 area_cols = st.columns(len(ZONE1_AREAS))
 for col, area in zip(area_cols, ZONE1_AREAS):
     is_selected = st.session_state["zone1_area_key"] == area["key"]
@@ -71,195 +152,193 @@ for col, area in zip(area_cols, ZONE1_AREAS):
 
 active_area = get_area(ZONE1_AREAS, st.session_state["zone1_area_key"])
 active_collection = active_area["collection"]
-active_schema     = active_area["schema"]
+active_schema = active_area["schema"]
+is_reference_area = active_schema == "weather"
 
-# ── Data load (single source, driven by active area) ──────────────────────────
 latest = load_latest(active_collection, active_schema)
+outside_latest = None if is_reference_area else load_latest("outside_weather_data", "weather")
+recent_history = load_history(active_collection, active_schema, hours=2)
 
-temp     = latest.get("temp_c")       if latest else None
+temp = latest.get("temp_c") if latest else None
 humidity = latest.get("humidity_pct") if latest else None
-weather  = latest.get("weather_desc") if latest else None
+weather = latest.get("weather_desc") if latest else None
 
-# Timestamp indicator
-if latest and latest.get("ts"):
-    ts_str = (
-        pd.to_datetime(latest["ts"])
-          .tz_localize("UTC")
-          .tz_convert("US/Eastern")
-          .strftime("%I:%M:%S %p")
-    )
-    st.caption(f"🟢 {active_area['label']} — last reading at {ts_str}")
+alerts_enabled = get_zone_alert("zone1").get("enabled", True)
+temp_alert = None if is_reference_area else evaluate_temperature_alert(temp, zone="zone1")
+humidity_alert = None if is_reference_area else evaluate_humidity_alert(humidity, zone="zone1")
+
+if not latest:
+    zone_summary_copy = f"{active_area['label']} has not reported any readings yet."
+elif is_reference_area:
+    zone_summary_copy = "Outside reference data is active. This feed is for comparison, not for indoor greenhouse alerting."
+elif temp_alert or humidity_alert:
+    zone_summary_copy = "One or more climate readings are outside the configured target range for Zone 1."
 else:
-    st.caption(f"⚪ {active_area['label']} — no readings found")
+    zone_summary_copy = "The selected position is inside the configured temperature and humidity range."
 
-# ── Temperature alerts ────────────────────────────────────────────────────────
-# TODO: alert logic still keyed on "zone1" and will evaluate whichever area
-# button is currently selected against indoor thresholds. Alert rework will
-# replace this with per-area evaluation.
+unit = render_zone1_top_controls(zone_summary_copy)
+
+if latest and latest.get("ts"):
+    local_ts = _to_local_time(pd.Series([latest["ts"]])).iloc[0]
+    st.caption(f"{active_area['label']} last reported at {local_ts.strftime('%b %d, %Y %I:%M:%S %p')}")
+else:
+    st.caption(f"{active_area['label']} has not reported a reading yet.")
+
 zone_alert_settings = get_zone_alert("zone1")
-temp_alert = evaluate_temperature_alert(temp, zone="zone1")
-humidity_alert = evaluate_humidity_alert(humidity, zone="zone1")
-# Use recipient list with fallback to legacy single-recipient key.
 email_recipients = zone_alert_settings.get("email_recipients") or []
 if not email_recipients and zone_alert_settings.get("email_to"):
     email_recipients = [zone_alert_settings.get("email_to")]
-# Collect one or more outbound email results for user visibility.
 email_status_msgs = []
 
-# Convert persisted Celsius thresholds for display to match the selected unit.
-if unit == "°F":
+if temp_alert and zone_alert_settings.get("email_enabled", False) and email_recipients:
+    cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
+    if should_send_email_alert("zone1", temp_alert["kind"], cooldown_minutes=cooldown, metric="temperature"):
+        sent_any = False
+        for recipient in email_recipients:
+            ok, msg = send_temperature_alert_email(
+                recipient=recipient,
+                zone="zone1",
+                kind=temp_alert["kind"],
+                temp_c=float(temp_alert["temp_c"]),
+                threshold_c=float(temp_alert["threshold_c"]),
+            )
+            sent_any = sent_any or ok
+            email_status_msgs.append(f"{recipient}: {msg}")
+        if sent_any:
+            mark_email_alert_sent("zone1", temp_alert["kind"], metric="temperature")
+
+if humidity_alert and zone_alert_settings.get("email_enabled", False) and email_recipients:
+    cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
+    if should_send_email_alert("zone1", humidity_alert["kind"], cooldown_minutes=cooldown, metric="humidity"):
+        sent_any = False
+        for recipient in email_recipients:
+            ok, msg = send_humidity_alert_email(
+                recipient=recipient,
+                zone="zone1",
+                kind=humidity_alert["kind"],
+                humidity_pct=float(humidity_alert["humidity_pct"]),
+                threshold_pct=float(humidity_alert["threshold_pct"]),
+            )
+            sent_any = sent_any or ok
+            email_status_msgs.append(f"{recipient}: {msg}")
+        if sent_any:
+            mark_email_alert_sent("zone1", humidity_alert["kind"], metric="humidity")
+
+if unit == FAHRENHEIT_UNIT:
     threshold_min_display = zone_alert_settings["temp_min_c"] * 9.0 / 5.0 + 32.0
     threshold_max_display = zone_alert_settings["temp_max_c"] * 9.0 / 5.0 + 32.0
 else:
     threshold_min_display = zone_alert_settings["temp_min_c"]
     threshold_max_display = zone_alert_settings["temp_max_c"]
 
-if temp is None:
-    st.warning("Temperature alert status unavailable because no current temperature reading was found.")
-elif not zone_alert_settings.get("enabled", True):
-    st.info("Temperature alerts are currently disabled for Zone 1. Enable them in Settings.")
-elif temp_alert and temp_alert["kind"] == "low":
-    # Alert values are stored/evaluated in Celsius and converted only for UI output.
-    alert_temp_display = temp_alert["temp_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["temp_c"]
-    alert_threshold_display = temp_alert["threshold_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["threshold_c"]
-    st.error(
-        f"Low temperature alert: {alert_temp_display:.1f} {unit} is below "
-        f"the minimum threshold ({alert_threshold_display:.1f} {unit})."
+temp_status_detail = (
+    f"Target band is {threshold_min_display:.1f}{unit} to {threshold_max_display:.1f}{unit}."
+    if not temp_alert
+    else (
+        f"Current reading is {_format_temp(temp_alert['temp_c'], unit)} and the threshold is "
+        f"{_format_temp(temp_alert['threshold_c'], unit)}."
     )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        # Cooldown is metric-specific so humidity emails do not block temperature emails.
-        if should_send_email_alert("zone1", "low", cooldown_minutes=cooldown, metric="temperature"):
-            sent_any = False
-            # Send to each configured recipient and aggregate per-address status.
-            for recipient in email_recipients:
-                ok, msg = send_temperature_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="low",
-                    temp_c=float(temp_alert["temp_c"]),
-                    threshold_c=float(temp_alert["threshold_c"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "low", metric="temperature")
-elif temp_alert and temp_alert["kind"] == "high":
-    alert_temp_display = temp_alert["temp_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["temp_c"]
-    alert_threshold_display = temp_alert["threshold_c"] * 9.0 / 5.0 + 32.0 if unit == "°F" else temp_alert["threshold_c"]
-    st.error(
-        f"High temperature alert: {alert_temp_display:.1f} {unit} exceeds "
-        f"the maximum threshold ({alert_threshold_display:.1f} {unit})."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        if should_send_email_alert("zone1", "high", cooldown_minutes=cooldown, metric="temperature"):
-            sent_any = False
-            for recipient in email_recipients:
-                ok, msg = send_temperature_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="high",
-                    temp_c=float(temp_alert["temp_c"]),
-                    threshold_c=float(temp_alert["threshold_c"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "high", metric="temperature")
-else:
-    st.success(
-        f"Temperature is within range ({threshold_min_display:.1f} to "
-        f"{threshold_max_display:.1f} {unit})."
-    )
-
-# ── Humidity alerts ───────────────────────────────────────────────────────────
+)
 humidity_min = float(zone_alert_settings.get("humidity_min_pct", 45.0))
 humidity_max = float(zone_alert_settings.get("humidity_max_pct", 80.0))
+humidity_status_detail = (
+    f"Target band is {humidity_min:.0f}% RH to {humidity_max:.0f}% RH."
+    if not humidity_alert
+    else (
+        f"Current reading is {humidity_alert['humidity_pct']:.0f}% RH and the threshold is "
+        f"{humidity_alert['threshold_pct']:.0f}% RH."
+    )
+)
+data_detail = "Reference feed only." if is_reference_area else (
+    "Email notifications are enabled for threshold crossings." if zone_alert_settings.get("email_enabled", False)
+    else "Email notifications are currently disabled."
+)
 
-if humidity is None:
-    st.warning("Humidity alert status unavailable because no current humidity reading was found.")
-elif not zone_alert_settings.get("enabled", True):
-    st.info("Humidity alerts are currently disabled for Zone 1. Enable them in Settings.")
-elif humidity_alert and humidity_alert["kind"] == "low":
-    st.error(
-        f"Low humidity alert: {humidity_alert['humidity_pct']:.0f}% is below "
-        f"the minimum threshold ({humidity_alert['threshold_pct']:.0f}%)."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        if should_send_email_alert("zone1", "low", cooldown_minutes=cooldown, metric="humidity"):
-            sent_any = False
-            # Send to each configured recipient and aggregate per-address status.
-            for recipient in email_recipients:
-                ok, msg = send_humidity_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="low",
-                    humidity_pct=float(humidity_alert["humidity_pct"]),
-                    threshold_pct=float(humidity_alert["threshold_pct"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "low", metric="humidity")
-elif humidity_alert and humidity_alert["kind"] == "high":
-    st.error(
-        f"High humidity alert: {humidity_alert['humidity_pct']:.0f}% exceeds "
-        f"the maximum threshold ({humidity_alert['threshold_pct']:.0f}%)."
-    )
-    if zone_alert_settings.get("email_enabled", False) and email_recipients:
-        cooldown = int(zone_alert_settings.get("email_cooldown_minutes", 30))
-        if should_send_email_alert("zone1", "high", cooldown_minutes=cooldown, metric="humidity"):
-            sent_any = False
-            for recipient in email_recipients:
-                ok, msg = send_humidity_alert_email(
-                    recipient=recipient,
-                    zone="zone1",
-                    kind="high",
-                    humidity_pct=float(humidity_alert["humidity_pct"]),
-                    threshold_pct=float(humidity_alert["threshold_pct"]),
-                )
-                sent_any = sent_any or ok
-                email_status_msgs.append(f"{recipient}: {msg}")
-            if sent_any:
-                mark_email_alert_sent("zone1", "high", metric="humidity")
-else:
-    st.success(f"Humidity is within range ({humidity_min:.0f}% to {humidity_max:.0f}%).")
+render_status_panel(
+    [
+        _status_for_metric("Temperature", temp, temp_alert, temp_status_detail, disabled=(not alerts_enabled and not is_reference_area)),
+        _status_for_metric("Humidity", humidity, humidity_alert, humidity_status_detail, disabled=(not alerts_enabled and not is_reference_area)),
+        {
+            "label": "Reporting",
+            "state": "Reference" if is_reference_area else "Live",
+            "title": active_area["label"],
+            "detail": data_detail,
+            "tone": "neutral" if is_reference_area else "good",
+        },
+    ]
+)
 
 for msg in email_status_msgs:
-    # Show send outcomes (success/failure) directly below alerts.
     st.caption(msg)
 
-# ── Metric cards ───────────────────────────────────────────────────────────────
-render_metrics_row(temp, humidity, weather, temp_unit=unit)
+temp_delta = _trend_delta(recent_history, "temp_c")
+humidity_delta = _trend_delta(recent_history, "humidity_pct")
+temp_trend, temp_trend_class = _trend_text(temp_delta, CELSIUS_UNIT)
+humidity_trend, humidity_trend_class = _trend_text(humidity_delta, "%", neutral_text="Humidity steady")
 
-st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+outside_temp_support = "Outside reference unavailable."
+outside_temp_value = "No data"
+if outside_latest and outside_latest.get("temp_c") is not None and temp is not None:
+    gap_c = temp - outside_latest["temp_c"]
+    gap_display = gap_c * 9.0 / 5.0 if unit == FAHRENHEIT_UNIT else gap_c
+    gap_suffix = FAHRENHEIT_UNIT if unit == FAHRENHEIT_UNIT else CELSIUS_UNIT
+    outside_temp_value = f"{gap_display:+.1f}<span class='metric-unit'>{gap_suffix}</span>"
+    outside_temp_support = "Difference between this indoor reading and the outside reference."
+elif outside_latest and outside_latest.get("temp_c") is not None:
+    outside_temp_value = _format_temp_html(outside_latest["temp_c"], unit)
 
-# ── Live readings (native st.metric) ──────────────────────────────────────────
-render_section_header("Live readings")
+metrics = [
+    {
+        "title": "Temperature",
+        "value": _format_temp_html(temp, unit),
+        "chip_class": "chip-green",
+        "icon": TEMPERATURE_ICON,
+        "support": f"{active_area['label']} live reading",
+        "trend": temp_trend,
+        "trend_class": temp_trend_class,
+    },
+    {
+        "title": "Humidity",
+        "value": f"{humidity:.0f}<span class='metric-unit'>% RH</span>" if humidity is not None else "No data",
+        "chip_class": "chip-blue",
+        "icon": HUMIDITY_ICON,
+        "support": "Relative humidity at the selected position",
+        "trend": humidity_trend,
+        "trend_class": humidity_trend_class,
+    },
+    {
+        "title": "Indoor vs outside",
+        "value": outside_temp_value,
+        "chip_class": "chip-amber",
+        "icon": OUTSIDE_ICON,
+        "support": outside_temp_support,
+        "trend": "Reference comparison" if outside_latest else "No outside reference",
+        "trend_class": "trend-good" if outside_latest else "",
+    },
+    {
+        "title": "Feed type",
+        "value": "Reference" if is_reference_area else "Sensor",
+        "chip_class": "chip-gray",
+        "icon": FEED_ICON,
+        "support": weather.title() if weather else ("Outside weather condition" if is_reference_area else active_area["label"]),
+        "trend": "Weather feed" if is_reference_area else "Greenhouse position",
+        "trend_class": "trend-good",
+    },
+]
 
-if temp is not None:
-    display_temp = (temp * 9/5) + 32 if unit == "°F" else temp
-    temp_string = f"{float(display_temp):.1f} {unit}"
-else:
-    temp_string = "N/A"
+render_section_header("Current Climate", icon=CLIMATE_ICON)
+render_metrics_row(metrics)
 
-k1, k2, k3 = st.columns(3)
-with k1:
-    st.metric("Temperature", temp_string)
-with k2:
-    st.metric("Humidity", f"{float(humidity):.0f} %" if humidity is not None else "N/A")
-with k3:
-    st.metric("Light", "N/A", help="Sensor not yet connected")
-# ── Charts ─────────────────────────────────────────────────────────────────────
-render_section_header("History")
-
-st.markdown("**Filter Data Range**")
+render_section_header("Climate History", icon=HISTORY_ICON)
+st.markdown("**Range filter**")
 col_radio, col_date = st.columns([1, 2])
 
 with col_radio:
-    time_mode = st.radio("Range Type", ["Last 24 Hours", "Last 7 Days", "Custom Range"], label_visibility="collapsed")
+    time_mode = st.radio(
+        "Range Type",
+        ["Last 24 Hours", "Last 7 Days", "Custom Range"],
+        label_visibility="collapsed",
+    )
 
 start_time = None
 end_time = None
@@ -268,32 +347,26 @@ hours = 24
 with col_date:
     if time_mode == "Last 24 Hours":
         hours = 24
+        st.markdown("<p class='control-caption'>Showing the most recent 24 hours of readings.</p>", unsafe_allow_html=True)
     elif time_mode == "Last 7 Days":
-        hours = 168 # 24 * 7
+        hours = 168
+        st.markdown("<p class='control-caption'>Showing a 7-day greenhouse history window.</p>", unsafe_allow_html=True)
     else:
-        # Custom Range: Date Picker
-        today = pd.Timestamp.now('US/Eastern').date()
+        today = pd.Timestamp.now("US/Eastern").date()
         date_range = st.date_input("Select Date Range", (today - pd.Timedelta(days=2), today))
-
-        # Only show time pickers IF they have successfully selected a start and end date
         if len(date_range) == 2:
-            # Create two small columns for the time pickers
             t_col1, t_col2 = st.columns(2)
             with t_col1:
-                start_t = st.time_input("Start Time", value=pd.Timestamp('00:00:00').time())
+                start_t = st.time_input("Start Time", value=pd.Timestamp("00:00:00").time())
             with t_col2:
-                end_t = st.time_input("End Time", value=pd.Timestamp('23:59:59').time())
+                end_t = st.time_input("End Time", value=pd.Timestamp("23:59:59").time())
 
-            # 1. Combine the selected Date + Time into a single Pandas datetime object
             start_combined = pd.to_datetime(f"{date_range[0]} {start_t}")
             end_combined = pd.to_datetime(f"{date_range[1]} {end_t}")
+            start_time = start_combined.tz_localize("US/Eastern").tz_convert("UTC").to_pydatetime()
+            end_time = end_combined.tz_localize("US/Eastern").tz_convert("UTC").to_pydatetime()
+            hours = None
 
-            # 2. Assign the Eastern timezone, then convert to UTC for the database!
-            start_time = start_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
-            end_time = end_combined.tz_localize('US/Eastern').tz_convert('UTC').to_pydatetime()
-            hours = None # Turn off the "hours" fallback
-
-# --- Load history from the active collection only ---
 chart_df = load_history(
     active_collection,
     active_schema,
@@ -301,103 +374,126 @@ chart_df = load_history(
     start_ts=start_time,
     end_ts=end_time,
 )
-chart_source = active_area["label"]
-
 if not chart_df.empty and "ts" in chart_df.columns:
-    chart_df["ts"] = pd.to_datetime(chart_df["ts"]).dt.tz_localize('UTC').dt.tz_convert('US/Eastern')
+    chart_df["ts"] = _to_local_time(chart_df["ts"])
 
-c1, c2 = st.columns(2)
-
-with c1:
-    if not chart_df.empty and "temp_c" in chart_df.columns:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=chart_df["ts"], y=chart_df["temp_c"],
-            mode="lines+markers",
-            line=dict(color="#10B981", width=2),
-            marker=dict(size=5),
-        ))
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            title=f"Temperature °C  ·  {chart_source}",
-            xaxis=dict(showgrid=False, tickformat="%H:%M"),
-            yaxis=dict(showgrid=True, gridcolor="rgba(128,128,128,0.15)", title="°C"),
-            margin=dict(l=0, r=0, t=40, b=0),
-            hovermode="x unified", showlegend=False, font=dict(size=11),
-        )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+display_temp_col = "temp_display"
+if not chart_df.empty and "temp_c" in chart_df.columns:
+    if unit == FAHRENHEIT_UNIT:
+        chart_df[display_temp_col] = chart_df["temp_c"] * 9.0 / 5.0 + 32.0
     else:
-        st.info("No temperature history yet.")
+        chart_df[display_temp_col] = chart_df["temp_c"]
 
-with c2:
-    if not chart_df.empty and "humidity_pct" in chart_df.columns:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=chart_df["ts"], y=chart_df["humidity_pct"],
+_plot_card_start()
+st.markdown(f"**{active_area['label']} climate history**")
+if not chart_df.empty and {"temp_c", "humidity_pct"}.issubset(chart_df.columns):
+    combined_fig = go.Figure()
+    combined_fig.add_trace(
+        go.Scatter(
+            x=chart_df["ts"],
+            y=chart_df[display_temp_col],
             mode="lines+markers",
-            line=dict(color="#3B82F6", width=2, dash="dot"),
-            marker=dict(size=5),
-        ))
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            title=f"Humidity %  ·  {chart_source}",
-            xaxis=dict(showgrid=False, tickformat="%H:%M"),
-            yaxis=dict(showgrid=True, gridcolor="rgba(128,128,128,0.15)", title="%"),
-            margin=dict(l=0, r=0, t=40, b=0),
-            hovermode="x unified", showlegend=False, font=dict(size=11),
+            name=f"Temperature ({unit})",
+            line=dict(color="#4F8B63", width=3),
+            marker=dict(size=4),
+            yaxis="y1",
         )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    else:
-        st.info("No humidity history yet.")
-
-# ── Temp vs Humidity overlay (full width) ─────────────────────────────────────
-if not chart_df.empty and "temp_c" in chart_df.columns and "humidity_pct" in chart_df.columns:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=chart_df["ts"], y=chart_df["temp_c"],
-        mode="lines+markers", name="Temperature (°C)",
-        line=dict(color="#10B981", width=2), marker=dict(size=5), yaxis="y1",
-    ))
-    fig.add_trace(go.Scatter(
-        x=chart_df["ts"], y=chart_df["humidity_pct"],
-        mode="lines+markers", name="Humidity (%)",
-        line=dict(color="#3B82F6", width=2, dash="dash"), marker=dict(size=5), yaxis="y2",
-    ))
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        title=f"Temp vs Humidity  ·  {chart_source}",
-        xaxis=dict(showgrid=False, tickformat="%H:%M"),
-        yaxis=dict(title="°C", showgrid=True, gridcolor="rgba(128,128,128,0.15)"),
-        yaxis2=dict(title="%", overlaying="y", side="right", showgrid=False),
-        hovermode="x unified",
-
-        # 1. Move legend below the x-axis, centered
-        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
-
-        # 2. Add 40px of bottom margin (b=40) so the legend doesn't get cut off
-        margin=dict(l=0, r=0, t=50, b=40),
-
-        font=dict(size=11),
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    combined_fig.add_trace(
+        go.Scatter(
+            x=chart_df["ts"],
+            y=chart_df["humidity_pct"],
+            mode="lines+markers",
+            name="Humidity (% RH)",
+            line=dict(color="#4C83C3", width=2, dash="dot"),
+            marker=dict(size=4),
+            yaxis="y2",
+        )
+    )
+    combined_fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=8, r=8, t=18, b=8),
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        xaxis=dict(showgrid=False, tickformat="%b %d\n%I:%M %p"),
+        yaxis=dict(
+            title=unit,
+            showgrid=True,
+            gridcolor="rgba(99, 116, 106, 0.12)",
+        ),
+        yaxis2=dict(
+            title="% RH",
+            overlaying="y",
+            side="right",
+            showgrid=False,
+        ),
+    )
+    st.plotly_chart(combined_fig, use_container_width=True, config={"displayModeBar": False})
 else:
-    st.info("No comparison data available yet.")
+    st.info("Combined history will appear here after enough temperature and humidity readings arrive for this position.")
+_plot_card_end()
 
-# ── Data table ─────────────────────────────────────────────────────────────────
-render_section_header("Raw data")
+with st.expander("Open detailed charts"):
+    detail_cols = st.columns(2)
+    with detail_cols[0]:
+        if not chart_df.empty and "temp_c" in chart_df.columns:
+            temp_fig = go.Figure()
+            temp_fig.add_trace(
+                go.Scatter(
+                    x=chart_df["ts"],
+                    y=chart_df[display_temp_col],
+                    mode="lines",
+                    line=dict(color="#4F8B63", width=3),
+                    name="Temperature",
+                )
+            )
+            temp_fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=8, r=8, t=20, b=8),
+                hovermode="x unified",
+                showlegend=False,
+                yaxis=dict(title=unit, showgrid=True, gridcolor="rgba(99, 116, 106, 0.12)"),
+                xaxis=dict(showgrid=False, tickformat="%b %d\n%I:%M %p"),
+            )
+            st.plotly_chart(temp_fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.info("No temperature history yet.")
 
-show_latest_only = st.toggle("Show latest reading only", value=True)
-limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, value=20, step=1)
+    with detail_cols[1]:
+        if not chart_df.empty and "humidity_pct" in chart_df.columns:
+            humidity_fig = go.Figure()
+            humidity_fig.add_trace(
+                go.Scatter(
+                    x=chart_df["ts"],
+                    y=chart_df["humidity_pct"],
+                    mode="lines",
+                    line=dict(color="#4C83C3", width=3),
+                    name="Humidity",
+                )
+            )
+            humidity_fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=8, r=8, t=20, b=8),
+                hovermode="x unified",
+                showlegend=False,
+                yaxis=dict(title="% RH", showgrid=True, gridcolor="rgba(99, 116, 106, 0.12)"),
+                xaxis=dict(showgrid=False, tickformat="%b %d\n%I:%M %p"),
+            )
+            st.plotly_chart(humidity_fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.info("No humidity history yet.")
 
-docs = load_readings(active_collection, active_schema, limit=limit)
-
-table_df = pd.DataFrame(docs)
-if table_df.empty:
-    st.info("No readings found yet.")
-else:
-    if "ts" in table_df.columns:
-        # Convert table timestamps to Eastern Time
-        table_df["ts"] = pd.to_datetime(table_df["ts"]).dt.tz_localize('UTC').dt.tz_convert('US/Eastern')
-    st.dataframe(table_df, use_container_width=True)
-
-st.markdown("---")
+with st.expander("Open raw readings"):
+    show_latest_only = st.toggle("Show latest reading only", value=True)
+    limit = 1 if show_latest_only else st.slider("Rows", min_value=1, max_value=90, value=20, step=1)
+    docs = load_readings(active_collection, active_schema, limit=limit)
+    table_df = pd.DataFrame(docs)
+    if table_df.empty:
+        st.info("No readings found yet.")
+    else:
+        if "ts" in table_df.columns:
+            table_df["ts"] = _to_local_time(table_df["ts"])
+        st.dataframe(table_df, use_container_width=True)
