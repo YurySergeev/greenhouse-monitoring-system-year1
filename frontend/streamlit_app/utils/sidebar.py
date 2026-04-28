@@ -9,6 +9,8 @@ from .styles import get_current_theme_name
 from .themes import THEMES
 from .zone_config import ZONE1_AREAS
 
+from .styles import get_current_theme_name, load_css
+
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 LOGO_PATH = ASSETS_DIR / "logo3.png"
 
@@ -70,23 +72,24 @@ def render_sidebar():
     if "theme" not in st.session_state:
         st.session_state["theme"] = list(THEMES.keys())[0]
 
+    load_css()
+
     snapshot = _sidebar_status_snapshot()
 
     with st.sidebar:
         if LOGO_PATH.exists():
             st.image(str(LOGO_PATH), width=110)
 
-        st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-        st.markdown('<p class="sidebar-title">Greenhouse Console</p>', unsafe_allow_html=True)
         st.markdown(
-            f'<p class="sidebar-copy">{snapshot["headline"]}</p>',
+            f"""
+            <div class="sidebar-card">
+                <p class="sidebar-title">Greenhouse Console</p>
+                <p class="sidebar-copy">{snapshot["headline"]}</p>
+                <p class="sidebar-stat">{snapshot["copy"]}</p>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-        st.markdown(
-            f'<p class="sidebar-stat">{snapshot["copy"]}</p>',
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown('<p class="section-label">Navigate</p>', unsafe_allow_html=True)
         if st.button("Home", use_container_width=True):
@@ -94,6 +97,8 @@ def render_sidebar():
         if st.button("Zone 1 Dashboard", use_container_width=True):
             st.switch_page("pages/1_zone1.py")
         st.button("Zone 2", use_container_width=True, disabled=True)
+        if st.button("Credits", use_container_width=True):
+            st.switch_page("pages/credits.py")
 
         st.markdown('<p class="section-label">Controls</p>', unsafe_allow_html=True)
         if st.button("Alert Settings", use_container_width=True):
