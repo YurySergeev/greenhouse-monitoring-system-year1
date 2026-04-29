@@ -37,7 +37,7 @@ jobs:
           $RUN "rm -rf ~/web/frontend ~/web/backend ~/web/hardware ~/web/docs ~/web/tests"
           $RUN "rm -f ~/web/greenhouse.zip"
 
-- name: Copy Zip to Cassini
+      - name: Copy Zip to Cassini
         run: |
           echo "Sending zip file..."
           $COPY greenhouse.zip $TARGET:./web
