@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 env:
-  HOST: greenhouse.cortana.org
+  HOST: greenhouse.kentcs.org
   USER: greenhouse
-  TARGET: greenhouse@greenhouse.cortana.org
-  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.cortana.org
+  TARGET: greenhouse@greenhouse.kentcs.org
+  RUN: ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no greenhouse@greenhouse.kentcs.org
   COPY: scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
 
 jobs:
@@ -54,15 +54,12 @@ jobs:
           ls -lh greenhouse.zip
 
           echo "Clean up old project on Cassini"
-          $RUN "rm -rf ~/web/GREENHOUSE-MONITORING-SYSTEM"
+          $RUN "rm -rf ~/web/frontend ~/web/backend ~/web/hardware ~/web/docs ~/web/tests"
           $RUN "rm -f ~/web/greenhouse.zip"
 
           echo " Copying zip to Cassini "
-          echo "$COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web"
-          $COPY greenhouse.zip greenhouse@greenhouse.cortana.org:./web
+          echo "$COPY greenhouse.zip $TARGET:./web"
+          $COPY greenhouse.zip $TARGET:./web
 
           echo " Unzipping on Cassini "
           $RUN "cd ~/web && python3 -m zipfile -e greenhouse.zip ."
-
-          echo " Move extracted folder into place (if needed)"
-          $RUN "cd ~/web && if [ -d './GREENHOUSE-MONITORING-SYSTEM-main' ]; then mv GREENHOUSE-MONITORING-SYSTEM-main GREENHOUSE-MONITORING-SYSTEM; fi"
