@@ -28,38 +28,26 @@ jobs:
           name: id_ed25519
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
-      - name: Check out the VM
+      - name: Prepare and Zip Project
         run: |
-          echo "$ ls -la"
-          ls -la
-          echo "$ whoami"
-          whoami 
-
-      - name: Check out to greenhouse
-        run: |
-          echo "$RUN ls -la"
-          $RUN ls -la
-
-          echo "$RUN whoami"
-          $RUN whoami 
-
-          echo "$RUN hostname"
-          $RUN hostname
-
-          echo "$RUN mkdir -p ./web"
-          $RUN mkdir -p ./web
-
-          echo " Zipping project locally "
           zip -r greenhouse.zip . 
-          ls -lh greenhouse.zip
 
-          echo "Clean up old project on Cassini"
+      - name: Clean up old project on Cassini
+        run: |
           $RUN "rm -rf ~/web/frontend ~/web/backend ~/web/hardware ~/web/docs ~/web/tests"
           $RUN "rm -f ~/web/greenhouse.zip"
 
-          echo " Copying zip to Cassini "
-          echo "$COPY greenhouse.zip $TARGET:./web"
+      - name: Copy and Unzip to Cassini
+        run: |
           $COPY greenhouse.zip $TARGET:./web
-
-          echo " Unzipping on Cassini "
           $RUN "cd ~/web && python3 -m zipfile -e greenhouse.zip ."
+
+      - name: Restart Website
+        run: |
+          echo "Shutting down old Streamlit process..."
+          $RUN "pkill -f Home.py || true"
+          
+          echo "Starting Streamlit Frontend (Port 15125)..."
+          $RUN "cd ~/web/frontend/streamlit_app && source ~/web/venv/bin/activate && nohup streamlit run Home.py --server.port 15125 --server.address 0.0.0.0 > web.log 2>&1 &"
+          
+          echo "Deployment complete......."
