@@ -37,14 +37,31 @@ jobs:
           $RUN "rm -rf ~/web/frontend ~/web/backend ~/web/hardware ~/web/docs ~/web/tests"
           $RUN "rm -f ~/web/greenhouse.zip"
 
-      - name: Copy and Unzip to Cassini
+      - name: Copy Zip to Cassini
         run: |
+          echo "Sending zip file..."
           $COPY greenhouse.zip $TARGET:./web
-          $RUN "cd ~/web && python3 -m zipfile -e greenhouse.zip ."
 
-      - name: Restart Website
+      - name: Execute Deployment on Cassini
         run: |
-          echo "Deploying and restarting website..."
-          $RUN "pkill -u greenhouse -f Home.py || true ; cd ~/web/frontend/streamlit_app && source ~/web/venv/bin/activate && nohup streamlit run Home.py --server.port 15125 --server.address 0.0.0.0 > web.log 2>&1 </dev/null &"
-
-          echo "Deploy complete...."
+          echo "Running remote deployment script..."
+          $RUN << 'EOF'
+            echo "1. Cleaning up old files..."
+            rm -rf ~/web/frontend ~/web/backend ~/web/hardware ~/web/docs ~/web/tests
+            rm -f ~/web/greenhouse.zip
+            
+            echo "2. Unzipping fresh code..."
+            cd ~/web
+            python3 -m zipfile -e greenhouse.zip .
+            
+            echo "3. Shutting down old Streamlit..."
+            pkill -u greenhouse -f Home.py || true
+            
+            echo "4. Starting new Streamlit..."
+            cd ~/web/frontend/streamlit_app
+            source ~/web/venv/bin/activate
+            nohup streamlit run Home.py --server.port 15125 --server.address 0.0.0.0 > web.log 2>&1 </dev/null &
+            
+            echo "5. Allowing background process to detach..."
+            sleep 2
+            EOF
