@@ -44,10 +44,7 @@ jobs:
 
       - name: Restart Website
         run: |
-          echo "Shutting down old Streamlit process..."
-          $RUN "pkill -u greenhouse -f Home.py || true"
-          
-          echo "Starting Streamlit Frontend (Port 15125)..."
-          $RUN "cd ~/web/frontend/streamlit_app && source ~/web/venv/bin/activate && nohup streamlit run Home.py --server.port 15125 --server.address 0.0.0.0 > web.log 2>&1 &"
-          
-          echo "Deployment complete! Website is running."
+          echo "Deploying and restarting website..."
+          $RUN "pkill -u greenhouse -f Home.py || true ; cd ~/web/frontend/streamlit_app && source ~/web/venv/bin/activate && nohup streamlit run Home.py --server.port 15125 --server.address 0.0.0.0 > web.log 2>&1 </dev/null &"
+
+          echo "Deploy complete...."
