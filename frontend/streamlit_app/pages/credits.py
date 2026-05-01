@@ -48,7 +48,7 @@ st.html("""
     <p>Henry Zheng</p>
     <p>Mololuwa Foluso</p>
     <p>Md Ijtihad Chowdhury</p>
-    <p>Nathan Festo
+    <p> Festo Mwakondo</p>
     <p>Rylan Bowe</p>
     <p>Contributor Name</p>
 
