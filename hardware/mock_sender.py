@@ -20,7 +20,7 @@ from mock_sensor import MockSensorNode
 # local IP if running on a different device.
 # --------------------------------------------------
 
-SERVER_URL = "http://192.168.1.147:5000/data"
+SERVER_URL = "http://192.168.1.189:5000/data"
 INTERVAL   = 5   # seconds between each reading
 
 
